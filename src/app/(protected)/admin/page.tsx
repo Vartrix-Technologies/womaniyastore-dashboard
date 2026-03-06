@@ -1,14 +1,14 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { useSync } from '@/context/SyncContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { StatsCardGrid } from '@/components/shared/StatsCardGrid';
 import { CountUp } from '@/components/shared/CountUp';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatters';
 import {
   Package,
   ShoppingCart,
@@ -16,10 +16,14 @@ import {
   Users,
   ClipboardList,
   QrCode,
-  Settings,
-  LayoutDashboard,
   RotateCcw,
   BarChart3,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  ChevronRight,
+  Wrench,
+  type LucideIcon,
 } from 'lucide-react';
 import { appConfig } from '@/lib/config/app.config';
 import { getCachedStats, setCachedStats } from '@/lib/utils/stats-cache';
@@ -27,17 +31,40 @@ import { getCachedStats, setCachedStats } from '@/lib/utils/stats-cache';
 const s = appConfig.styles;
 const a = s.accent;
 
+// ── Section / card type definitions ──────────────────────────────────────
+interface ModuleCard {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  href: string;
+  gradient: string;
+}
+
+interface ModuleSection {
+  label: string;
+  icon: LucideIcon;
+  iconGradient: string;
+  cards: ModuleCard[];
+}
+
 export default function AdminDashboard() {
   const { profile, loading } = useAuth();
-  const { getPendingCount } = useSync();
+  const router = useRouter();
   const [stats, setStats] = useState(() => getCachedStats('admin_dashboard', {
     availableItems: 0,
     todaySales: 0,
-    activeStaff: 0,
+    dailyTurnover: 0,
+    itemsSoldToday: 0,
   }));
+  const [weeklyInsight, setWeeklyInsight] = useState<{
+    thisWeek: number;
+    lastWeek: number;
+    percentChange: number;
+    direction: 'up' | 'down' | 'flat';
+  } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats + weekly insight
   useEffect(() => {
     if (!profile?.shop_id) return;
 
@@ -48,7 +75,18 @@ export default function AdminDashboard() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const [itemsRes, salesRes, staffRes] = await Promise.all([
+        // Weekly insight date ranges
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun
+        const thisWeekStart = new Date(now);
+        thisWeekStart.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)); // Monday
+        thisWeekStart.setHours(0, 0, 0, 0);
+
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+        const lastWeekEnd = new Date(thisWeekStart); // exclusive
+
+        const [itemsRes, salesRes, turnoverRes, itemsSoldRes, thisWeekRes, lastWeekRes] = await Promise.all([
           supabase
             .from('inventory_items')
             .select('*', { count: 'exact', head: true })
@@ -60,23 +98,65 @@ export default function AdminDashboard() {
             .eq('shop_id', shopId)
             .gte('created_at', today.toISOString()),
           supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
+            .from('sales')
+            .select('total_amount')
             .eq('shop_id', shopId)
-            .eq('role', 'staff'),
+            .gte('created_at', today.toISOString()),
+          supabase
+            .from('sale_items')
+            .select('id', { count: 'exact', head: true })
+            .eq('shop_id', shopId)
+            .gte('created_at', today.toISOString()),
+          // This week's revenue
+          supabase
+            .from('sales')
+            .select('total_amount')
+            .eq('shop_id', shopId)
+            .gte('created_at', thisWeekStart.toISOString()),
+          // Last week's revenue
+          supabase
+            .from('sales')
+            .select('total_amount')
+            .eq('shop_id', shopId)
+            .gte('created_at', lastWeekStart.toISOString())
+            .lt('created_at', lastWeekEnd.toISOString()),
         ]);
 
         // Only update if we got valid responses (stale-while-revalidate)
-        if (!itemsRes.error && !salesRes.error && !staffRes.error) {
+        if (!itemsRes.error && !salesRes.error && !turnoverRes.error && !itemsSoldRes.error) {
+          const dailyTurnover = (turnoverRes.data || []).reduce(
+            (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0),
+            0
+          );
           const newStats = {
             availableItems: itemsRes.count || 0,
             todaySales: salesRes.count || 0,
-            activeStaff: staffRes.count || 0,
+            dailyTurnover,
+            itemsSoldToday: itemsSoldRes.count || 0,
           };
           setStats(newStats);
           setCachedStats('admin_dashboard', newStats);
         } else {
           console.warn('Some stats queries failed — keeping previous values');
+        }
+
+        // Weekly insight calculation
+        if (!thisWeekRes.error && !lastWeekRes.error) {
+          const thisWeekTotal = (thisWeekRes.data || []).reduce(
+            (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0), 0
+          );
+          const lastWeekTotal = (lastWeekRes.data || []).reduce(
+            (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0), 0
+          );
+          const pct = lastWeekTotal > 0
+            ? ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100
+            : thisWeekTotal > 0 ? 100 : 0;
+          setWeeklyInsight({
+            thisWeek: thisWeekTotal,
+            lastWeek: lastWeekTotal,
+            percentChange: Math.round(pct),
+            direction: pct > 1 ? 'up' : pct < -1 ? 'down' : 'flat',
+          });
         }
       } catch (error) {
         // Network error / offline — keep showing previous stats
@@ -89,114 +169,120 @@ export default function AdminDashboard() {
     fetchStats();
   }, [profile?.shop_id]);
 
-  const adminCards = [
+  // ── Module sections ──────────────────────────────────────────────────
+  const sections: ModuleSection[] = [
     {
-      title: 'Inventory Management',
-      description: 'Manage stock, add new lots, view all items',
-      icon: Package,
-      href: '/admin/inventory',
-      gradient: 'from-blue-500 to-indigo-600',
-    },
-    {
-      title: 'Sales & Bills',
-      description: 'View all sales, generate bills',
-      icon: ShoppingCart,
-      href: '/admin/sales',
-      gradient: 'from-green-500 to-emerald-600',
-    },
-    {
-      title: 'Returns',
-      description: 'Process and track product returns',
-      icon: RotateCcw,
-      href: '/admin/returns',
-      gradient: 'from-orange-500 to-red-600',
-    },
-    {
-      title: 'Finances & Reports',
-      description: 'Track revenue, expenses, and profits',
+      label: 'Business',
       icon: TrendingUp,
-      href: '/admin/finances',
-      gradient: 'from-purple-500 to-violet-600',
+      iconGradient: 'from-blue-500 to-indigo-600',
+      cards: [
+        {
+          title: 'Inventory',
+          description: 'Stock, lots & items',
+          icon: Package,
+          href: '/admin/inventory',
+          gradient: 'from-blue-500 to-indigo-600',
+        },
+        {
+          title: 'Sales & Bills',
+          description: 'Transactions & analytics',
+          icon: ShoppingCart,
+          href: '/admin/sales',
+          gradient: 'from-green-500 to-emerald-600',
+        },
+        {
+          title: 'Finances',
+          description: 'Revenue & expenses',
+          icon: TrendingUp,
+          href: '/admin/finances',
+          gradient: 'from-purple-500 to-violet-600',
+        },
+      ],
     },
     {
-      title: 'Staff Management',
-      description: 'Manage staff accounts and permissions',
+      label: 'Staff',
       icon: Users,
-      href: '/admin/staff',
-      gradient: 'from-orange-500 to-amber-600',
+      iconGradient: 'from-orange-500 to-amber-600',
+      cards: [
+        {
+          title: 'Management',
+          description: 'Accounts & permissions',
+          icon: Users,
+          href: '/admin/staff',
+          gradient: 'from-orange-500 to-amber-600',
+        },
+        {
+          title: 'Performance',
+          description: 'Sales & task analytics',
+          icon: BarChart3,
+          href: '/admin/staff-performance',
+          gradient: 'from-violet-500 to-purple-600',
+        },
+        {
+          title: 'Attendance',
+          description: 'Clock-in logs & hours',
+          icon: ClipboardList,
+          href: '/admin/attendance',
+          gradient: a.gradientCard,
+        },
+      ],
     },
     {
-      title: 'Staff Performance',
-      description: 'Sales, tasks & attendance analytics per staff',
-      icon: BarChart3,
-      href: '/admin/staff-performance',
-      gradient: 'from-violet-500 to-purple-600',
+      label: 'Operations',
+      icon: Wrench,
+      iconGradient: 'from-pink-500 to-rose-600',
+      cards: [
+        {
+          title: 'Returns',
+          description: 'Process & track returns',
+          icon: RotateCcw,
+          href: '/admin/returns',
+          gradient: 'from-orange-500 to-red-600',
+        },
+        {
+          title: 'QR Codes',
+          description: 'Labels & pre-prints',
+          icon: QrCode,
+          href: '/admin/qr-codes',
+          gradient: 'from-pink-500 to-rose-600',
+        },
+        {
+          title: 'Checklists',
+          description: 'Templates & assignments',
+          icon: ClipboardList,
+          href: '/admin/checklists',
+          gradient: 'from-indigo-500 to-blue-600',
+        },
+      ],
     },
-    {
-      title: 'Attendance',
-      description: 'View staff attendance logs',
-      icon: ClipboardList,
-      href: '/admin/attendance',
-      gradient: a.gradientCard,
-    },
-    {
-      title: 'Checklists',
-      description: 'Manage checklist templates and assignments',
-      icon: ClipboardList,
-      href: '/admin/checklists',
-      gradient: 'from-indigo-500 to-blue-600',
-    },
-    {
-      title: 'QR Codes',
-      description: 'Manage QR codes and pre-print labels',
-      icon: QrCode,
-      href: '/admin/qr-codes',
-      gradient: 'from-pink-500 to-rose-600',
-    },
-    // {
-    //   title: 'Settings',
-    //   description: 'App configuration and preferences',
-    //   icon: Settings,
-    //   href: '/admin/settings',
-    //   gradient: 'from-gray-500 to-slate-600',
-    // },
   ];
 
   // Loading skeleton
   if (loading) {
     return (
       <div className="space-y-4 md:space-y-6">
-        {/* Header skeleton */}
         <div className="space-y-2">
           <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
           <div className="h-5 w-96 bg-gray-100 rounded animate-pulse" />
         </div>
-
-        {/* Stats skeleton */}
         <StatsCardGrid loading={true} stats={[]} />
-
-        {/* Cards skeleton */}
-        <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-gray-200 rounded-lg animate-pulse" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-4 w-full bg-gray-100 rounded animate-pulse" />
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <div className="h-16 bg-muted rounded-lg animate-pulse" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-5 w-28 bg-gray-200 rounded animate-pulse" />
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 2, 3].map((j) => (
+                <div key={j} className="h-16 bg-muted rounded-lg animate-pulse" />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-content-in">
+    <div className="space-y-5 md:space-y-6 animate-content-in">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
@@ -212,98 +298,128 @@ export default function AdminDashboard() {
           {
             label: 'Available Items',
             value: <CountUp end={stats.availableItems} />,
+            icon: Package,
             isActive: true,
             isDefault: true,
             activeClassName: `${s.statsActive.total.border} ${s.statsActive.total.bg}`,
             valueColor: a.text,
+            onClick: () => router.push('/admin/inventory'),
           },
           {
             label: "Today's Sales",
             value: <CountUp end={stats.todaySales} />,
+            icon: ShoppingCart,
             isActive: true,
             isDefault: true,
             activeClassName: `${s.statsActive.total.border} ${s.statsActive.total.bg}`,
             valueColor: a.text,
+            onClick: () => router.push('/admin/sales'),
           },
           {
-            label: 'Active Staff',
-            value: <CountUp end={stats.activeStaff} />,
+            label: 'Daily Turnover',
+            value: formatCurrency(stats.dailyTurnover),
+            icon: TrendingUp,
             isActive: true,
             isDefault: true,
             activeClassName: `${s.statsActive.total.border} ${s.statsActive.total.bg}`,
             valueColor: a.text,
+            onClick: () => router.push('/admin/finances'),
           },
           {
-            label: 'Pending Syncs',
-            value: <CountUp end={getPendingCount()} />,
+            label: 'Items Sold Today',
+            value: <CountUp end={stats.itemsSoldToday} />,
+            icon: BarChart3,
             isActive: true,
             isDefault: true,
             activeClassName: `${s.statsActive.total.border} ${s.statsActive.total.bg}`,
             valueColor: a.text,
+            onClick: () => router.push('/admin/sales'),
           },
         ]}
       />
 
-      {/* Admin Module Cards */}
-      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {adminCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.href} href={card.href}>
-              <Card className={`hover:shadow-lg ${s.btnAnimation} cursor-pointer h-full bg-gradient-to-br from-background to-muted/30 border shadow-sm`}>
-                <CardHeader className="h-full px-4 py-0 flex items-center justify-center">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${card.gradient} text-white shadow-md flex-shrink-0`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-semibold leading-tight mb-0.5">{card.title}</CardTitle>
-                      <CardDescription className="text-xs leading-snug line-clamp-2">{card.description}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Weekly Insight Banner */}
+      {weeklyInsight && (
+        <button
+          type="button"
+          onClick={() => router.push('/admin/sales')}
+          className={`w-full rounded-lg border px-4 py-3 flex items-center gap-3 transition-all cursor-pointer hover:shadow-md ${
+            weeklyInsight.direction === 'up'
+              ? 'bg-green-50/60 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+              : weeklyInsight.direction === 'down'
+              ? 'bg-red-50/60 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+              : 'bg-muted/40 border-border'
+          }`}
+        >
+          <div className={`p-1.5 rounded-full ${
+            weeklyInsight.direction === 'up' ? 'bg-green-100 text-green-600'
+              : weeklyInsight.direction === 'down' ? 'bg-red-100 text-red-600'
+              : 'bg-muted text-muted-foreground'
+          }`}>
+            {weeklyInsight.direction === 'up' ? <ArrowUpRight className="h-4 w-4" />
+              : weeklyInsight.direction === 'down' ? <ArrowDownRight className="h-4 w-4" />
+              : <Minus className="h-4 w-4" />}
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium">
+              This week:{' '}
+              <span className={a.text}>{formatCurrency(weeklyInsight.thisWeek)}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {weeklyInsight.direction === 'flat'
+                ? 'On par with last week'
+                : `${Math.abs(weeklyInsight.percentChange)}% ${weeklyInsight.direction === 'up' ? 'higher' : 'lower'} than last week (${formatCurrency(weeklyInsight.lastWeek)})`}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+      )}
 
-      {/* Quick Actions */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
-          <CardDescription className="text-sm">Frequently used operations</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button 
-            asChild 
-            className={`${s.primaryGradient} ${s.primaryGradientHover} ${s.btnAnimation}`}
-          >
-            <Link href="/admin/inventory/add-lot">Add Stock Lot</Link>
-          </Button>
-          <Button 
-            asChild 
-            variant="outline"
-            className={s.btnAnimation}
-          >
-            <Link href="/pos">Open POS</Link>
-          </Button>
-          <Button 
-            asChild 
-            variant="outline"
-            className={s.btnAnimation}
-          >
-            <Link href="/admin/finances">Add Expense</Link>
-          </Button>
-          <Button 
-            asChild 
-            variant="outline"
-            className={s.btnAnimation}
-          >
-            <Link href="/admin/sales">View Sales</Link>
-          </Button>
-        </CardContent>
-      </Card> */}
+      {/* Grouped Module Sections */}
+      {sections.map((section) => {
+        const SectionIcon = section.icon;
+        return (
+          <div key={section.label} className="space-y-2">
+            {/* Section header */}
+            <div className="flex items-center gap-2 px-0.5">
+              <div className={`p-1 rounded-md bg-gradient-to-br ${section.iconGradient} text-white`}>
+                <SectionIcon className="h-3.5 w-3.5" />
+              </div>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                {section.label}
+              </h2>
+            </div>
+
+            {/* Section cards — always 3-col grid */}
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              {section.cards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Link key={card.href} href={card.href}>
+                    <Card className={`hover:shadow-lg ${s.btnAnimationSubtle} cursor-pointer h-full border shadow-sm`}>
+                      <CardHeader className="px-3 py-1 md:px-4 md:py-1">
+                        <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left">
+                          <div className={`p-2 rounded-lg bg-gradient-to-br ${card.gradient} text-white shadow-sm flex-shrink-0`}>
+                            <Icon className="h-4 w-4 md:h-5 md:w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-sm md:text-base font-semibold leading-tight">
+                              {card.title}
+                            </CardTitle>
+                            <CardDescription className="text-[10px] md:text-xs leading-snug mt-0.5 hidden sm:block">
+                              {card.description}
+                            </CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

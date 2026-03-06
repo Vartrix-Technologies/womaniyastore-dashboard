@@ -8,7 +8,7 @@ export const addStockLotSchema = z
   .object({
     prefix_id: z.string().min(1, 'QR prefix is required'),
     category_id: z.string().min(1, 'Category is required'),
-    size_id: z.string().optional().default(''),
+    size_id: z.string().min(1, 'Size is required'),
     free_text_size: z.string().optional().default(''),
     vendor_name: z.string().optional().default(''),
     date_of_stock_arrival: z.string().min(1, 'Stock arrival date is required'),

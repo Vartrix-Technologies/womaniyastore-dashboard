@@ -376,7 +376,7 @@ export default function AddStockLotPage() {
             {/* Size and Custom Size in one row on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="size" className="text-sm">Size</Label>
+                <Label htmlFor="size" className="text-sm">Size *</Label>
                 <Controller
                   name="size_id"
                   control={control}
@@ -395,6 +395,7 @@ export default function AddStockLotPage() {
                     </Select>
                   )}
                 />
+                {errors.size_id && <p className="text-xs text-red-500">{errors.size_id.message}</p>}
               </div>
 
               <div className="space-y-2">
