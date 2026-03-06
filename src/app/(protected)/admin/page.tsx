@@ -378,7 +378,7 @@ export default function AdminDashboard() {
       {sections.map((section) => {
         const SectionIcon = section.icon;
         return (
-          <div key={section.label} className="space-y-1.5">
+          <div key={section.label} className="space-y-1.5 py-1.5">
             {/* Section header */}
             <div className="flex items-center gap-1.5">
               <div className={`p-1 rounded bg-gradient-to-br ${section.iconGradient} text-white`}>
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
                 const Icon = card.icon;
                 return (
                   <Link key={card.href} href={card.href}>
-                    <div className={`rounded-lg border shadow-sm hover:shadow-md ${s.btnAnimationSubtle} cursor-pointer h-full p-2 md:p-3 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:text-left bg-card`}>
+                    <div className={`rounded-lg border shadow-sm hover:shadow-md ${s.btnAnimationSubtle} cursor-pointer h-full p-2 pt-3 md:p-3 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:text-left bg-card`}>
                       <div className={`p-1.5 rounded-md bg-gradient-to-br ${card.gradient} text-white shrink-0`}>
                         <Icon className="h-4 w-4" />
                       </div>
