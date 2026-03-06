@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatsCardGrid } from '@/components/shared/StatsCardGrid';
 import { CountUp } from '@/components/shared/CountUp';
 import Link from 'next/link';
@@ -282,12 +281,12 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-5 md:space-y-6 animate-content-in">
+    <div className="space-y-3 md:space-y-5 animate-content-in">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Welcome back, {profile?.full_name}! Manage your shop operations.
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Welcome back, {profile?.full_name}!
         </p>
       </div>
 
@@ -343,7 +342,7 @@ export default function AdminDashboard() {
         <button
           type="button"
           onClick={() => router.push('/admin/sales')}
-          className={`w-full rounded-lg border px-4 py-3 flex items-center gap-3 transition-all cursor-pointer hover:shadow-md ${
+          className={`w-full rounded-lg border px-3 py-2.5 flex items-center gap-2.5 transition-all cursor-pointer hover:shadow-md ${
             weeklyInsight.direction === 'up'
               ? 'bg-green-50/60 border-green-200 dark:bg-green-950/20 dark:border-green-800'
               : weeklyInsight.direction === 'down'
@@ -351,27 +350,27 @@ export default function AdminDashboard() {
               : 'bg-muted/40 border-border'
           }`}
         >
-          <div className={`p-1.5 rounded-full ${
+          <div className={`p-1 rounded-full ${
             weeklyInsight.direction === 'up' ? 'bg-green-100 text-green-600'
               : weeklyInsight.direction === 'down' ? 'bg-red-100 text-red-600'
               : 'bg-muted text-muted-foreground'
           }`}>
-            {weeklyInsight.direction === 'up' ? <ArrowUpRight className="h-4 w-4" />
-              : weeklyInsight.direction === 'down' ? <ArrowDownRight className="h-4 w-4" />
-              : <Minus className="h-4 w-4" />}
+            {weeklyInsight.direction === 'up' ? <ArrowUpRight className="h-3.5 w-3.5" />
+              : weeklyInsight.direction === 'down' ? <ArrowDownRight className="h-3.5 w-3.5" />
+              : <Minus className="h-3.5 w-3.5" />}
           </div>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-medium">
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-medium truncate">
               This week:{' '}
               <span className={a.text}>{formatCurrency(weeklyInsight.thisWeek)}</span>
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground truncate">
               {weeklyInsight.direction === 'flat'
                 ? 'On par with last week'
                 : `${Math.abs(weeklyInsight.percentChange)}% ${weeklyInsight.direction === 'up' ? 'higher' : 'lower'} than last week (${formatCurrency(weeklyInsight.lastWeek)})`}
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </button>
       )}
 
@@ -379,40 +378,36 @@ export default function AdminDashboard() {
       {sections.map((section) => {
         const SectionIcon = section.icon;
         return (
-          <div key={section.label} className="space-y-2">
+          <div key={section.label} className="space-y-1.5">
             {/* Section header */}
-            <div className="flex items-center gap-2 px-0.5">
-              <div className={`p-1 rounded-md bg-gradient-to-br ${section.iconGradient} text-white`}>
-                <SectionIcon className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5">
+              <div className={`p-1 rounded bg-gradient-to-br ${section.iconGradient} text-white`}>
+                <SectionIcon className="h-3 w-3" />
               </div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 {section.label}
               </h2>
             </div>
 
-            {/* Section cards — always 3-col grid */}
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
+            {/* Section cards — compact 3-col tiles */}
+            <div className="grid grid-cols-3 gap-1.5 md:gap-2">
               {section.cards.map((card) => {
                 const Icon = card.icon;
                 return (
                   <Link key={card.href} href={card.href}>
-                    <Card className={`hover:shadow-lg ${s.btnAnimationSubtle} cursor-pointer h-full border shadow-sm`}>
-                      <CardHeader className="px-3 py-1 md:px-4 md:py-1">
-                        <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left">
-                          <div className={`p-2 rounded-lg bg-gradient-to-br ${card.gradient} text-white shadow-sm flex-shrink-0`}>
-                            <Icon className="h-4 w-4 md:h-5 md:w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-sm md:text-base font-semibold leading-tight">
-                              {card.title}
-                            </CardTitle>
-                            <CardDescription className="text-[10px] md:text-xs leading-snug mt-0.5 hidden sm:block">
-                              {card.description}
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                    </Card>
+                    <div className={`rounded-lg border shadow-sm hover:shadow-md ${s.btnAnimationSubtle} cursor-pointer h-full p-2 md:p-3 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:text-left bg-card`}>
+                      <div className={`p-1.5 rounded-md bg-gradient-to-br ${card.gradient} text-white shrink-0`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 w-full">
+                        <p className="text-xs sm:text-sm font-semibold leading-tight truncate">
+                          {card.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 hidden sm:block truncate">
+                          {card.description}
+                        </p>
+                      </div>
+                    </div>
                   </Link>
                 );
               })}
