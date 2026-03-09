@@ -97,7 +97,7 @@ export default function QrCodesPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [prefixPopoverOpen, setPrefixPopoverOpen] = useState(false);
   const [selectedPrefixId, setSelectedPrefixId] = useState<string>('');
-  const [quantity, setQuantity] = useState(100);
+  const [quantity, setQuantity] = useState<string>('');
 
   useEffect(() => {
     async function loadQrCodes() {
@@ -193,7 +193,8 @@ export default function QrCodesPage() {
       return;
     }
 
-    if (quantity < 1 || quantity > 9999) {
+    const qty = parseInt(quantity);
+    if (isNaN(qty) || qty < 1 || qty > 9999) {
       toast.error('Quantity must be between 1 and 9999');
       return;
     }
@@ -203,17 +204,17 @@ export default function QrCodesPage() {
       const selectedPrefix = qrPrefixes.find(p => p.id === selectedPrefixId);
       const BATCH_SIZE = 500;
 
-      if (quantity <= BATCH_SIZE) {
+      if (qty <= BATCH_SIZE) {
         // Single batch — call RPC once
         const { data, error } = await (supabase.rpc as any)('generate_qr_codes_with_prefix', {
           p_shop_id: profile.shop_id,
           p_prefix_id: selectedPrefixId,
-          p_quantity: quantity,
+          p_quantity: qty,
         });
 
         if (error) {
           if (error.message?.includes('exceeds')) {
-            throw new Error(`Cannot generate ${quantity} codes. Sequence limit (9999) would be exceeded for prefix ${selectedPrefix?.prefix}.`);
+            throw new Error(`Cannot generate ${qty} codes. Sequence limit (9999) would be exceeded for prefix ${selectedPrefix?.prefix}.`);
           }
           throw error;
         }
@@ -226,7 +227,7 @@ export default function QrCodesPage() {
         }
 
         toast.success(
-          `Generated ${quantity} QR codes with prefix ${selectedPrefix?.prefix}!`,
+          `Generated ${qty} QR codes with prefix ${selectedPrefix?.prefix}!`,
           {
             description: firstCode && lastCode ? formatCodeRange(firstCode, lastCode) : undefined,
             duration: 4000
@@ -234,14 +235,14 @@ export default function QrCodesPage() {
         );
       } else {
         // Chunked generation for large batches
-        const batches = Math.ceil(quantity / BATCH_SIZE);
+        const batches = Math.ceil(qty / BATCH_SIZE);
         let generated = 0;
         let firstCode: string | undefined;
         let lastCode: string | undefined;
 
         for (let i = 0; i < batches; i++) {
-          const batchSize = Math.min(BATCH_SIZE, quantity - generated);
-          toast.loading(`Generating batch ${i + 1}/${batches} (${generated}/${quantity})...`, { id: 'qr-gen-progress' });
+          const batchSize = Math.min(BATCH_SIZE, qty - generated);
+          toast.loading(`Generating batch ${i + 1}/${batches} (${generated}/${qty})...`, { id: 'qr-gen-progress' });
 
           const { data, error } = await (supabase.rpc as any)('generate_qr_codes_with_prefix', {
             p_shop_id: profile.shop_id,
@@ -274,7 +275,8 @@ export default function QrCodesPage() {
         );
       }
 
-      // Reset to first page to see new codes and refresh table + stats
+      // Clear quantity input and reset to first page to see new codes
+      setQuantity('');
       setCurrentPage(1);
       triggerRefresh();
     } catch (error: any) {
@@ -651,7 +653,7 @@ export default function QrCodesPage() {
                   action={
                     <Button
                       variant="outline"
-                      onClick={() => router.push('/admin/settings?tab=qr-prefixes')}
+                      onClick={() => router.push('/settings?tab=qr-prefixes')}
                     >
                       Go to Settings
                     </Button>
@@ -726,10 +728,10 @@ export default function QrCodesPage() {
                         id="quantity"
                         type="number"
                         value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setQuantity(e.target.value)}
                         min={1}
                         max={9999}
-                        placeholder="100"
+                        placeholder="Enter quantity (1-9999)"
                       />
                       <p className="text-xs text-muted-foreground">
                         Max 9999 codes per prefix
@@ -739,7 +741,7 @@ export default function QrCodesPage() {
                   <div className="flex items-center gap-2 mt-4">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generating || !selectedPrefixId}
+                      disabled={generating || !selectedPrefixId || !quantity}
                       className={`${s.primaryGradient} ${s.primaryGradientHover} ${s.btnAnimation}`}
                     >
                       <Plus className="mr-2 h-4 w-4" />
@@ -749,7 +751,7 @@ export default function QrCodesPage() {
                       variant="ghost"
                       size="sm"
                       className="text-xs text-muted-foreground"
-                      onClick={() => router.push('/admin/settings?tab=qr-prefixes')}
+                      onClick={() => router.push('/settings?tab=qr-prefixes')}
                     >
                       <Settings className="mr-1 h-3.5 w-3.5" />
                       Manage Prefixes

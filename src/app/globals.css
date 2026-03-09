@@ -543,3 +543,25 @@ html {
   background: rgba(255,255,255,0.95) !important;
   transform: scale(1.05);
 }
+
+/* ── Keyboard-aware dialogs (touch devices) ────────────────────
+   On phones/tablets the virtual keyboard can hide dialog inputs
+   and buttons. These rules ensure dialogs remain usable:
+   • overflow-y: auto lets the dialog scroll to reveal obscured fields.
+   • dvh (dynamic viewport height) shrinks when the keyboard appears,
+     keeping the dialog fully within the usable screen area. */
+
+@media (hover: none) and (pointer: coarse) {
+  [data-slot="dialog-content"] {
+    overflow-y: auto;
+  }
+}
+
+@supports (height: 1dvh) {
+  @media (hover: none) and (pointer: coarse) {
+    [data-slot="dialog-content"] {
+      max-height: 85dvh;
+      top: 50dvh;
+    }
+  }
+}

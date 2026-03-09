@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { appConfig } from '@/lib/config/app.config';
 import { formatCurrency } from '@/lib/formatters';
@@ -210,7 +210,7 @@ export default function AddStockLotPage() {
       const result = await addStockLot(requestPayload);
 
       toast.success(`Successfully added ${result.items.length} items to inventory`, {
-        description: `Lot ID: ${result.lot.id} | QR Codes assigned: ${result.items.length}`,
+        description: `QR Codes assigned: ${result.items.length}`,
         duration: 4000
       });
       router.push('/admin/inventory');
@@ -260,24 +260,31 @@ export default function AddStockLotPage() {
             {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="category" className="text-sm">Category *</Label>
-              <Controller
-                name="category_id"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="category" className={`text-sm ${errors.category_id ? 'border-red-500' : ''}`}>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id} className="text-sm">
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              <div className="flex items-center gap-2">
+                <Controller
+                  name="category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="category" className={`text-sm ${errors.category_id ? 'border-red-500' : ''}`}>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id} className="text-sm">
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <Link href="/settings?tab=categories" title="Manage categories">
+                  <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
               {errors.category_id && <p className="text-xs text-red-500">{errors.category_id.message}</p>}
             </div>
 
@@ -285,13 +292,13 @@ export default function AddStockLotPage() {
             <div className="space-y-2">
               <div className="flex flex-row gap-3 items-center">
                 <Label htmlFor="prefix" className="text-sm">QR Prefix *</Label>
-              <Link href="/admin/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors">
+              <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors">
                     Can&apos;t see your QR prefix?
                   </Link>
               </div>
               {qrPrefixes.length === 0 ? (
                 <div className="text-sm text-muted-foreground border border-dashed rounded-md p-3">
-                  No active QR prefixes found. <Link href="/admin/settings?tab=qr-prefixes" className={`${s.linkColor} hover:underline`}>Create one in Settings</Link>
+                  No active QR prefixes found. <Link href="/settings?tab=qr-prefixes" className={`${s.linkColor} hover:underline`}>Create one in Settings</Link>
                 </div>
               ) : (
                 <>
@@ -377,24 +384,31 @@ export default function AddStockLotPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="size" className="text-sm">Size</Label>
-                <Controller
-                  name="size_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="size" className="text-sm">
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sizes.map((size) => (
-                          <SelectItem key={size.id} value={size.id} className="text-sm">
-                            {size.size_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                <div className="flex items-center gap-2">
+                  <Controller
+                    name="size_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="size" className="text-sm">
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sizes.map((size) => (
+                            <SelectItem key={size.id} value={size.id} className="text-sm">
+                              {size.size_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <Link href="/settings?tab=sizes" title="Manage sizes">
+                    <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
 
               <div className="space-y-2">
