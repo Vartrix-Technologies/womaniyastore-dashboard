@@ -384,31 +384,24 @@ export default function AddStockLotPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="size" className="text-sm">Size</Label>
-                <div className="flex items-center gap-2">
-                  <Controller
-                    name="size_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger id="size" className="text-sm">
-                          <SelectValue placeholder="Select size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sizes.map((size) => (
-                            <SelectItem key={size.id} value={size.id} className="text-sm">
-                              {size.size_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <Link href="/settings?tab=sizes" title="Manage sizes">
-                    <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
+                <Controller
+                  name="size_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="size" className="text-sm">
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sizes.map((size) => (
+                          <SelectItem key={size.id} value={size.id} className="text-sm">
+                            {size.size_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="space-y-2">
