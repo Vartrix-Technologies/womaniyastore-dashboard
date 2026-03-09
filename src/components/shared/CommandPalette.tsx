@@ -31,6 +31,8 @@ import {
   LayoutDashboard,
   Search,
   TrendingUp,
+  HelpCircle,
+  BookOpen,
 } from 'lucide-react';
 import type { Profile } from '@/types';
 import { ThemePickerDialog } from '@/components/shared/ThemePickerDialog';
@@ -71,6 +73,10 @@ const NAV_ITEMS: NavItem[] = [
 
   // Superadmin routes
   { label: 'Superadmin Panel',  keywords: 'super admin manage shops',   icon: <LayoutDashboard className="h-4 w-4" />,  href: '/superadmin',           roles: ['superadmin'] },
+
+  // Help & resources (all roles)
+  { label: 'FAQs',              keywords: 'help questions answers faq support',  icon: <HelpCircle className="h-4 w-4" />,  href: '/faqs',                 roles: ['owner', 'admin', 'staff', 'superadmin'] },
+  { label: 'User Guide',        keywords: 'guide onboarding tutorial how to help manual', icon: <BookOpen className="h-4 w-4" />,  href: '/guide',               roles: ['owner', 'admin', 'staff', 'superadmin'] },
 ];
 
 /* ── Component ────────────────────────────────────────────────────────── */

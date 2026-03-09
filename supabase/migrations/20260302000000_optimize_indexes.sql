@@ -129,13 +129,34 @@ CREATE INDEX IF NOT EXISTS idx_sale_items_shop_id
 CREATE INDEX IF NOT EXISTS idx_sales_created_by 
   ON public.sales (created_by);
 
--- financial_transactions FK indexes
-CREATE INDEX IF NOT EXISTS idx_financial_transactions_created_by 
-  ON public.financial_transactions (created_by);
-CREATE INDEX IF NOT EXISTS idx_financial_transactions_expense_category_id 
-  ON public.financial_transactions (expense_category_id);
-CREATE INDEX IF NOT EXISTS idx_financial_transactions_related_sale_id 
-  ON public.financial_transactions (related_sale_id);
+-- financial_transactions FK indexes (columns may not exist on fresh install)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'financial_transactions' AND column_name = 'created_by' AND table_schema = 'public'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_financial_transactions_created_by ON public.financial_transactions (created_by)';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'financial_transactions' AND column_name = 'expense_category_id' AND table_schema = 'public'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_financial_transactions_expense_category_id ON public.financial_transactions (expense_category_id)';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'financial_transactions' AND column_name = 'category_id' AND table_schema = 'public'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_financial_transactions_category_id ON public.financial_transactions (category_id)';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'financial_transactions' AND column_name = 'related_sale_id' AND table_schema = 'public'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_financial_transactions_related_sale_id ON public.financial_transactions (related_sale_id)';
+  END IF;
+END $$;
 
 -- sale_returns FK indexes
 CREATE INDEX IF NOT EXISTS idx_sale_returns_processed_by 

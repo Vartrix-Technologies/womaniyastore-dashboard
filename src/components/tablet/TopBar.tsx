@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { SyncStatusIndicator } from '@/components/shared/SyncStatusIndicator';
 import { ThemePickerDialog } from '@/components/shared/ThemePickerDialog';
 import { appConfig } from '@/lib/config';
-import { LogOut, Settings, HelpCircle, Palette, Sun, Moon, Search } from 'lucide-react';
+import { LogOut, Settings, HelpCircle, Palette, Sun, Moon, Search, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
@@ -198,9 +198,13 @@ export function TopBar({ profile, shopName }: TopBarProps) {
                   />
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => toast.info('FAQs coming soon!')} className="gap-2 rounded-lg cursor-pointer">
+                <DropdownMenuItem onClick={() => router.push('/faqs')} className="gap-2 rounded-lg cursor-pointer">
                   <HelpCircle className="h-4 w-4 text-muted-foreground" />
                   FAQ&apos;s
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/guide')} className="gap-2 rounded-lg cursor-pointer">
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  User Guide
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setThemePickerOpen(true)} className="gap-2 rounded-lg cursor-pointer">
                   <Palette className="h-4 w-4 text-muted-foreground" />

@@ -11,7 +11,8 @@
 | **Vartrix GitHub account** | Organisation or personal account, ready to host repos |
 | **Vartrix Supabase account** | organisation or personal, on a paid plan (Free tier has limits) |
 | **Vartrix Vercel account** | Linked to Vartrix GitHub |
-| **Domain** | `womaniyastore.in` purchased; DNS access available |
+| **Cloudflare account** | For DNS proxy & Cloudflare Workers (Supabase ISP ban workaround) |
+| **Domain** | `womaniyastore.in` purchased; DNS managed via **Cloudflare** |
 | **Supabase CLI** | `npm i -g supabase` (v1.200+ recommended) |
 | **Git** | Installed locally |
 
@@ -47,7 +48,7 @@ git commit -m "Initial production release v1.0"
 ### Step 3 — Clean the Code Before Pushing
 ```powershell
 # Remove files that should NOT ship to production
-Remove-Item -Recurse -Force docs/
+ 
 Remove-Item -Force check_sale_data.sql
 Remove-Item -Force .env.local              # NEVER commit secrets
 
@@ -97,9 +98,28 @@ You now have: `main` (production) and `dev` (development) branches with clean hi
 4. Wait for project to finish provisioning (~2 minutes)
 5. Note down:
    - **Project Reference ID** (from URL: `https://supabase.com/dashboard/project/<ref-id>`)
+   mjtopwjogmijavcuyumd
    - **API URL** (`https://<ref-id>.supabase.co`)
+   https://mjtopwjogmijavcuyumd.supabase.co
    - **Anon Key** (Settings → API → `anon` `public` key)
+   eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qdG9wd2pvZ21pamF2Y3V5dW1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODgxMTcsImV4cCI6MjA4ODM2NDExN30.w4GBEt43sNGxcm_ZszDCtn3_jIecqEbAVZ40el8xV2s
+
+   publishable key -
+   sb_publishable_iMue2StJPZEXREB875psyw_8y3offT9
    - **Service Role Key** (Settings → API → `service_role` key — keep secret!)
+
+   Database key - 
+   postgresql://postgres:[YOUR-PASSWORD]@db.mjtopwjogmijavcuyumd.supabase.co:5432/postgres
+
+   SERVICE KEY
+   const SERVICE_KEY = 'SUPABASE_SERVICE_KEY'
+   Example usage
+   const SUPABASE_URL = "https://mjtopwjogmijavcuyumd.supabase.co"
+   const supabase = createClient(SUPABASE_URL, process.env.SERVICE_KEY);
+
+   .env
+   EXPO_PUBLIC_SUPABASE_URL=https://mjtopwjogmijavcuyumd.supabase.co
+EXPO_PUBLIC_SUPABASE_KEY=sb_publishable_iMue2StJPZEXREB875psyw_8y3offT9
 
 ### Step 6 — Link Supabase CLI to New Project
 ```powershell
@@ -162,7 +182,9 @@ In the Supabase Dashboard → SQL Editor, run:
 --   Auto Confirm: ON
 --
 -- Note the user's UUID from the Users list, then run:
-
+admin - 079f51f4-8445-40b8-acb8-cae1f2ab02ff
+superadmin - 9b97dd13-e9d4-421f-98e7-a0f2ea8b4249
+ 
 INSERT INTO profiles (id, full_name, role, is_active, must_change_password)
 VALUES (
   '<user-uuid-from-auth>',
@@ -203,28 +225,36 @@ WHERE role = 'superadmin';
 
 | Variable | Value | Environments |
 |----------|-------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref-id>.supabase.co` | Production, Preview, Development |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<cloudflare-worker-subdomain>.workers.dev` | Production, Preview |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref-id>.supabase.co` | Development (local only, if ISP ban doesn't apply) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `<anon-key-from-step-5>` | Production, Preview, Development |
+
+> **⚠️ This env var change is MANDATORY.** The Cloudflare DNS proxy on `dashboard.womaniyastore.in` only proxies frontend traffic (browser → Cloudflare → Vercel). Supabase API calls are made **directly from the user's browser** to whatever `NEXT_PUBLIC_SUPABASE_URL` is set to. If it still points to `supabase.co`, the ISP ban will block those calls. The Cloudflare Worker URL must be used so browser API requests go through the Worker instead.
+>
+> The `NEXT_PUBLIC_SUPABASE_ANON_KEY` stays unchanged — the Worker forwards all headers (including the API key) as-is to Supabase. See **Phase 3B** below.
 
 6. Click **Deploy**
 
-### Step 13 — Configure Custom Domain
+### Step 13 — Configure Custom Domain (via Cloudflare DNS Proxy)
 **In Vercel:**
 1. Go to Project → Settings → Domains
 2. Add: `dashboard.womaniyastore.in`
 3. Vercel will show the DNS records needed
 
-**At your DNS provider (where you bought `womaniyastore.in`):**
-1. Add a **CNAME** record:
+**In Cloudflare (DNS is managed here, NOT at the domain registrar):**
+1. Ensure `womaniyastore.in` is added to Cloudflare and nameservers point to Cloudflare
+2. Add a **CNAME** record:
    - **Name/Host:** `dashboard`
    - **Value/Target:** `cname.vercel-dns.com`
-   - **TTL:** Auto or 3600
-2. Wait for DNS propagation (5 min – 48 hours, usually ~10 min)
+   - **Proxy status:** **Proxied** (orange cloud ON) — this routes traffic through Cloudflare's CDN/WAF
+   - **TTL:** Auto
+3. Cloudflare handles SSL termination (edge certificate) and re-encrypts to Vercel (Full Strict mode recommended)
 
 **Back in Vercel:**
-1. Vercel will auto-verify the domain
-2. SSL certificate is auto-provisioned (Let's Encrypt)
-3. Verify: visit `https://dashboard.womaniyastore.in`
+1. Vercel will auto-verify the domain (may take a moment with Cloudflare proxy)
+2. Verify: visit `https://dashboard.womaniyastore.in`
+
+> **Note:** Since Cloudflare proxies the traffic, the SSL certificate on the Vercel side is still provisioned, but the end-user sees Cloudflare's edge certificate. Ensure Cloudflare SSL/TLS mode is set to **Full (Strict)**.
 
 ### Step 14 — Configure Branch Deployments in Vercel
 1. Project → Settings → Git
@@ -235,9 +265,67 @@ WHERE role = 'superadmin';
 
 ---
 
+## Phase 3B: Cloudflare Worker — Supabase Proxy (ISP Ban Workaround)
+
+> **Context:** Several Indian ISPs temporarily block `*.supabase.co`. A Cloudflare Worker acts as a transparent reverse proxy so the frontend reaches Supabase through a non-blocked domain.
+
+### Step 15 — Create the Cloudflare Worker
+> **Status:** This Worker is already deployed on the **Vartrix Cloudflare account**. The steps below are for reference/recreation only.
+
+1. Log in to **Cloudflare Dashboard** → Workers & Pages
+2. Click **Create Worker**
+3. Name: `supabase-proxy` (or similar)
+4. Replace the default code with:
+
+```javascript
+export default {
+  async fetch(request) {
+    const SUPABASE_URL = "https://<ref-id>.supabase.co"; // your actual Supabase project URL
+
+    const url = new URL(request.url);
+    const target = SUPABASE_URL + url.pathname + url.search;
+
+    const modifiedRequest = new Request(target, {
+      method: request.method,
+      headers: request.headers,
+      body:
+        request.method === "GET" || request.method === "HEAD"
+          ? null
+          : request.body,
+      redirect: "follow",
+    });
+
+    return fetch(modifiedRequest);
+  },
+};
+```
+
+5. Click **Save and Deploy**
+6. Note the Worker URL: `https://supabase-proxy.<your-cf-subdomain>.workers.dev`
+
+### Step 16 — (Optional) Attach a Custom Route
+Instead of using the `workers.dev` URL, you can route it through a subdomain:
+1. In Cloudflare → Workers → your worker → Triggers → Add Route
+2. Route: `api-proxy.womaniyastore.in/*`
+3. Add a CNAME in Cloudflare DNS: `api-proxy` → `supabase-proxy.<your-cf-subdomain>.workers.dev` (Proxied)
+4. Update `NEXT_PUBLIC_SUPABASE_URL` in Vercel to `https://api-proxy.womaniyastore.in`
+
+### Step 17 — Verify the Proxy
+```powershell
+# Test the worker is forwarding correctly
+curl https://supabase-proxy.<your-cf-subdomain>.workers.dev/rest/v1/ -H "apikey: <anon-key>" -I
+# Should return 200 OK from Supabase
+```
+
+> **Important:** The Supabase Anon Key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) remains unchanged — it is sent as a header by the Supabase JS client. The Worker simply forwards all headers as-is.
+
+> **When the ISP ban is lifted:** Update `NEXT_PUBLIC_SUPABASE_URL` in Vercel back to `https://<ref-id>.supabase.co` and optionally decommission the Worker.
+
+---
+
 ## Phase 4: Smoke Testing
 
-### Step 15 — Full End-to-End Test
+### Step 18 — Full End-to-End Test
 Run through this checklist on `https://dashboard.womaniyastore.in`:
 
 | # | Test | Expected Result |
@@ -262,14 +350,14 @@ Run through this checklist on `https://dashboard.womaniyastore.in`:
 
 ## Phase 5: Production Hardening (Recommended)
 
-### Step 16 — Update Branding (if needed)
+### Step 19 — Update Branding (if needed)
 File: `src/lib/config/app.config.ts`  
 Update: `brand.name`, `brand.fullName`, `brand.shortName`, `brand.logoLetter`
 
 File: `public/manifest.json`  
 Update: `name`, `short_name`, `description`, icons
 
-### Step 17 — Supabase Security Checklist
+### Step 20 — Supabase Security Checklist
 - [ ] Enable **Point-in-Time Recovery** (PITR) on Supabase (requires Pro plan)
 - [ ] Set up **Database Backups** schedule
 - [ ] Review **RLS policies** — all tables should have RLS enabled (they do)
@@ -277,13 +365,15 @@ Update: `name`, `short_name`, `description`, icons
 - [ ] Enable **Auth rate limiting** in Supabase Dashboard
 - [ ] Set **JWT expiry** to appropriate duration (default: 3600s)
 
-### Step 18 — Vercel Security Checklist
+### Step 21 — Vercel Security Checklist
 - [ ] Ensure `.env.local` is NOT in the repo (use Vercel env vars only)
 - [ ] Enable **Vercel deployment protection** (optional: password-protect previews)
 - [ ] Review **Vercel Access** — only Vartrix team members have access
 - [ ] Set up **Vercel Analytics** (optional)
 
-### Step 19 — Monitoring
+### Step 22 — Monitoring
+- [ ] Monitor **Cloudflare Worker** analytics → check request volume and errors
+- [ ] Review Cloudflare **Firewall Events** for suspicious activity
 - [ ] Enable **Supabase Log Explorer** → monitor edge function errors
 - [ ] Set up **Vercel runtime logs** → monitor frontend errors
 - [ ] Consider Sentry or similar for error tracking (future)
@@ -297,7 +387,9 @@ Update: `name`, `short_name`, `description`, icons
 | **GitHub** | Personal private repo | Vartrix GitHub repo |
 | **Supabase** | Personal account project | Vartrix Supabase project |
 | **Vercel** | Personal account | Vartrix Vercel account |
-| **Domain** | `vartrix-store-dashboard.vercel.app` | `dashboard.womaniyastore.in` |
+| **Cloudflare** | — | Vartrix Cloudflare account (DNS proxy + Worker) |
+| **Domain** | `vartrix-store-dashboard.vercel.app` | `dashboard.womaniyastore.in` (via Cloudflare proxy → Vercel) |
+| **Supabase URL** | Direct `supabase.co` | Cloudflare Worker proxy (`workers.dev` or custom subdomain) |
 | **Branches** | main | main (prod), dev |
 | **Data** | Test/demo data | Client's real data (starts empty) |
 
@@ -309,8 +401,9 @@ If something goes wrong during migration:
 
 1. **Supabase:** Delete the project and recreate from scratch (migrations are idempotent)
 2. **Vercel:** Redeploy from a previous commit via Vercel Dashboard → Deployments → "..." → Redeploy  
-3. **DNS:** CNAME changes propagate within minutes; can revert by removing the record
-4. **Git:** All changes are on the Vartrix repo; original demo repo is untouched
+3. **Cloudflare DNS:** CNAME changes propagate within minutes; can revert by removing or un-proxying the record
+4. **Cloudflare Worker:** Roll back the worker code or delete the worker entirely; update `NEXT_PUBLIC_SUPABASE_URL` back to direct Supabase URL
+5. **Git:** All changes are on the Vartrix repo; original demo repo is untouched
 
 ---
 
@@ -320,3 +413,5 @@ If something goes wrong during migration:
 - All migrations are idempotent (safe to re-run) thanks to `IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP ... IF EXISTS`
 - The initial schema migration (`00000000_initial_schema.sql`) was generated from the live database's type export to capture tables/enums created via the Dashboard
 - Edge functions run with `service_role` privileges — they bypass RLS intentionally for operations like user creation
+- **Cloudflare Worker proxy** is a temporary workaround for ISP-level blocks on `supabase.co` in India. Once the ban is lifted, switch `NEXT_PUBLIC_SUPABASE_URL` back to the direct `https://<ref-id>.supabase.co` URL and optionally remove the Worker
+- The Cloudflare DNS proxy (orange cloud) on `dashboard.womaniyastore.in` provides CDN caching, DDoS protection, and hides the Vercel origin IP

@@ -11,7 +11,7 @@
  * - Background sync support
  */
 
-const CACHE_NAME = 'womaniya-v2';
+const CACHE_NAME = 'womaniya-v1';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to pre-cache during install
