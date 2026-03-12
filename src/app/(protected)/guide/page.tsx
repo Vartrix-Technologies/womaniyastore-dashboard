@@ -74,7 +74,10 @@ interface GuidePhase {
     id: string;
     label: string;
     description: string;
-    color: string;
+    dotColor: string;
+    stepBg: string;
+    iconBg: string;
+    iconColor: string;
     bgColor: string;
     textColor: string;
     borderColor: string;
@@ -86,7 +89,10 @@ const GUIDE_PHASES: GuidePhase[] = [
         id: 'setup',
         label: 'Setup',
         description: 'One-time setup to get started',
-        color: '#10b981',
+        dotColor: 'bg-emerald-500 dark:bg-emerald-400',
+        stepBg: 'bg-emerald-600 dark:bg-emerald-500',
+        iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+        iconColor: 'text-emerald-600 dark:text-emerald-400',
         bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
         textColor: 'text-emerald-700 dark:text-emerald-400',
         borderColor: 'border-emerald-200 dark:border-emerald-800',
@@ -221,7 +227,10 @@ const GUIDE_PHASES: GuidePhase[] = [
         id: 'daily',
         label: 'Daily Operations',
         description: 'Everyday tasks and workflows',
-        color: '#3b82f6',
+        dotColor: 'bg-blue-500 dark:bg-blue-400',
+        stepBg: 'bg-blue-600 dark:bg-blue-500',
+        iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+        iconColor: 'text-blue-600 dark:text-blue-400',
         bgColor: 'bg-blue-50 dark:bg-blue-950/30',
         textColor: 'text-blue-700 dark:text-blue-400',
         borderColor: 'border-blue-200 dark:border-blue-800',
@@ -383,7 +392,10 @@ const GUIDE_PHASES: GuidePhase[] = [
         id: 'staff',
         label: 'Staff & Management',
         description: 'Team management and oversight',
-        color: '#8b5cf6',
+        dotColor: 'bg-purple-500 dark:bg-purple-400',
+        stepBg: 'bg-purple-600 dark:bg-purple-500',
+        iconBg: 'bg-purple-100 dark:bg-purple-900/40',
+        iconColor: 'text-purple-600 dark:text-purple-400',
         bgColor: 'bg-purple-50 dark:bg-purple-950/30',
         textColor: 'text-purple-700 dark:text-purple-400',
         borderColor: 'border-purple-200 dark:border-purple-800',
@@ -498,7 +510,10 @@ const GUIDE_PHASES: GuidePhase[] = [
         id: 'insights',
         label: 'Insights & Reports',
         description: 'Analytics, exports, and dashboards',
-        color: '#f59e0b',
+        dotColor: 'bg-amber-500 dark:bg-amber-400',
+        stepBg: 'bg-amber-600 dark:bg-amber-500',
+        iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+        iconColor: 'text-amber-600 dark:text-amber-400',
         bgColor: 'bg-amber-50 dark:bg-amber-950/30',
         textColor: 'text-amber-700 dark:text-amber-400',
         borderColor: 'border-amber-200 dark:border-amber-800',
@@ -590,7 +605,10 @@ const GUIDE_PHASES: GuidePhase[] = [
         id: 'personalization',
         label: 'Personalization',
         description: 'Make the app yours',
-        color: '#64748b',
+        dotColor: 'bg-slate-500 dark:bg-slate-400',
+        stepBg: 'bg-slate-600 dark:bg-slate-500',
+        iconBg: 'bg-slate-100 dark:bg-slate-800/40',
+        iconColor: 'text-slate-600 dark:text-slate-400',
         bgColor: 'bg-slate-50 dark:bg-slate-950/30',
         textColor: 'text-slate-700 dark:text-slate-400',
         borderColor: 'border-slate-200 dark:border-slate-700',
@@ -736,8 +754,7 @@ export default function GuidePage() {
                                 className="text-xs px-3 py-1.5 rounded-md gap-1.5"
                             >
                                 <span
-                                    className="w-2 h-2 rounded-full shrink-0"
-                                    style={{ backgroundColor: phase.color }}
+                                    className={`w-2 h-2 rounded-full shrink-0 ${(GUIDE_PHASES.find(p => p.id === phase.id) || phase).dotColor}`}
                                 />
                                 {phase.label}
                                 <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
@@ -763,8 +780,7 @@ export default function GuidePage() {
                             className={`flex items-center gap-3 p-3 rounded-lg border ${phase.borderColor} ${phase.bgColor}`}
                         >
                             <span
-                                className="w-3 h-3 rounded-full shrink-0 shadow-sm"
-                                style={{ backgroundColor: phase.color }}
+                                className={`w-3 h-3 rounded-full shrink-0 shadow-sm ${phase.dotColor}`}
                             />
                             <div>
                                 <h3 className={`font-semibold text-sm ${phase.textColor}`}>{phase.label}</h3>
@@ -788,10 +804,9 @@ export default function GuidePage() {
                                         <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/30">
                                             <div className="flex items-center gap-3 text-left">
                                                 <div
-                                                    className="p-2 rounded-lg shrink-0"
-                                                    style={{ backgroundColor: `${phase.color}15` }}
+                                                    className={`p-2 rounded-lg shrink-0 ${phase.iconBg}`}
                                                 >
-                                                    <Icon className="h-4 w-4" style={{ color: phase.color }} />
+                                                    <Icon className={`h-4 w-4 ${phase.iconColor}`} />
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-sm">{card.title}</p>
@@ -813,8 +828,7 @@ export default function GuidePage() {
                                                 {card.steps.map((step, stepIdx) => (
                                                     <div key={stepIdx} className="flex items-start gap-3">
                                                         <div
-                                                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 mt-0.5"
-                                                            style={{ backgroundColor: phase.color }}
+                                                            className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 mt-0.5 ${phase.stepBg}`}
                                                         >
                                                             {stepIdx + 1}
                                                         </div>

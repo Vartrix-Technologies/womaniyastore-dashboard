@@ -257,6 +257,10 @@ function InventoryPageContent() {
       }
 
       // Build query with filters
+      // Use !inner join on lots when filtering by sale_type or category
+      // so PostgREST excludes parent rows that don't match the filter
+      const needsInnerLots = saleTypeFilter !== 'all' || categoryFilter !== 'all';
+      const lotsJoin = needsInnerLots ? 'lots!inner' : 'lots';
       let query = supabase
         .from('inventory_items')
         .select(`
@@ -266,7 +270,7 @@ function InventoryPageContent() {
           sold_at,
           created_at,
           qr_codes (code, id),
-          lots (
+          ${lotsJoin} (
             id,
             selling_price_default,
             cost_price_per_unit,
@@ -712,10 +716,10 @@ function InventoryPageContent() {
               </Select>
               <Select value={saleTypeFilter} onValueChange={(v) => { setSaleTypeFilter(v); setCurrentPage(1); }}>
                 <SelectTrigger className="w-full sm:w-[170px]">
-                  <SelectValue placeholder="All Order Types" />
+                  <SelectValue placeholder="All Item Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Order Types</SelectItem>
+                  <SelectItem value="all">All Item Types</SelectItem>
                   <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="promotion">Promotion Sale</SelectItem>
                   <SelectItem value="festival">Festival Sale</SelectItem>

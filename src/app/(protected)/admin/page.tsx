@@ -281,11 +281,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-3 md:space-y-5 animate-content-in">
+    <div className="space-y-3 md:space-y-5 lg:space-y-7 animate-content-in lg:max-w-5xl lg:mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-0.5 text-sm">
+        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+        <p className="text-muted-foreground mt-0.5 text-sm lg:text-base">
           Welcome back, {profile?.full_name}!
         </p>
       </div>
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
         <button
           type="button"
           onClick={() => router.push('/admin/sales')}
-          className={`w-full rounded-lg border px-3 py-2.5 flex items-center gap-2.5 transition-all cursor-pointer hover:shadow-md ${
+          className={`w-full rounded-lg border px-3 lg:px-4 py-2.5 lg:py-3.5 flex items-center gap-2.5 lg:gap-3 transition-all cursor-pointer hover:shadow-md ${
             weeklyInsight.direction === 'up'
               ? 'bg-green-50/60 border-green-200 dark:bg-green-950/20 dark:border-green-800'
               : weeklyInsight.direction === 'down'
@@ -350,27 +350,27 @@ export default function AdminDashboard() {
               : 'bg-muted/40 border-border'
           }`}
         >
-          <div className={`p-1 rounded-full ${
+          <div className={`p-1 lg:p-1.5 rounded-full ${
             weeklyInsight.direction === 'up' ? 'bg-green-100 text-green-600'
               : weeklyInsight.direction === 'down' ? 'bg-red-100 text-red-600'
               : 'bg-muted text-muted-foreground'
           }`}>
-            {weeklyInsight.direction === 'up' ? <ArrowUpRight className="h-3.5 w-3.5" />
-              : weeklyInsight.direction === 'down' ? <ArrowDownRight className="h-3.5 w-3.5" />
-              : <Minus className="h-3.5 w-3.5" />}
+            {weeklyInsight.direction === 'up' ? <ArrowUpRight className="h-3.5 w-3.5 lg:h-5 lg:w-5" />
+              : weeklyInsight.direction === 'down' ? <ArrowDownRight className="h-3.5 w-3.5 lg:h-5 lg:w-5" />
+              : <Minus className="h-3.5 w-3.5 lg:h-5 lg:w-5" />}
           </div>
           <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-medium truncate">
+            <p className="text-sm lg:text-base font-medium truncate">
               This week:{' '}
               <span className={a.text}>{formatCurrency(weeklyInsight.thisWeek)}</span>
             </p>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs lg:text-sm text-muted-foreground truncate">
               {weeklyInsight.direction === 'flat'
                 ? 'On par with last week'
                 : `${Math.abs(weeklyInsight.percentChange)}% ${weeklyInsight.direction === 'up' ? 'higher' : 'lower'} than last week (${formatCurrency(weeklyInsight.lastWeek)})`}
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          <ChevronRight className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground shrink-0" />
         </button>
       )}
 
@@ -378,32 +378,32 @@ export default function AdminDashboard() {
       {sections.map((section) => {
         const SectionIcon = section.icon;
         return (
-          <div key={section.label} className="space-y-1.5 py-1.5">
+          <div key={section.label} className="space-y-1.5 lg:space-y-2.5 py-1.5 lg:py-2">
             {/* Section header */}
-            <div className="flex items-center gap-1.5">
-              <div className={`p-1 rounded bg-gradient-to-br ${section.iconGradient} text-white`}>
-                <SectionIcon className="h-3 w-3" />
+            <div className="flex items-center gap-1.5 lg:gap-2">
+              <div className={`p-1 lg:p-1.5 rounded bg-gradient-to-br ${section.iconGradient} text-white`}>
+                <SectionIcon className="h-3 w-3 lg:h-4 lg:w-4" />
               </div>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <h2 className="text-xs lg:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 {section.label}
               </h2>
             </div>
 
             {/* Section cards — compact 3-col tiles */}
-            <div className="grid grid-cols-3 gap-1.5 md:gap-2">
+            <div className="grid grid-cols-3 gap-1.5 md:gap-2 lg:gap-3">
               {section.cards.map((card) => {
                 const Icon = card.icon;
                 return (
                   <Link key={card.href} href={card.href}>
-                    <div className={`rounded-lg border shadow-sm hover:shadow-md ${s.btnAnimationSubtle} cursor-pointer h-full p-2 pt-3 md:p-3 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:text-left bg-card`}>
-                      <div className={`p-1.5 rounded-md bg-gradient-to-br ${card.gradient} text-white shrink-0`}>
-                        <Icon className="h-4 w-4" />
+                    <div className={`rounded-lg border shadow-sm hover:shadow-md ${s.btnAnimationSubtle} cursor-pointer h-full p-2 pt-3 md:p-3 lg:p-4 flex flex-col items-center text-center gap-1.5 lg:gap-2.5 sm:flex-row sm:text-left bg-card`}>
+                      <div className={`p-1.5 lg:p-2.5 rounded-md bg-gradient-to-br ${card.gradient} text-white shrink-0`}>
+                        <Icon className="h-4 w-4 lg:h-6 lg:w-6" />
                       </div>
                       <div className="min-w-0 w-full">
-                        <p className="text-xs sm:text-sm font-semibold leading-tight truncate">
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold leading-tight truncate">
                           {card.title}
                         </p>
-                        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 hidden sm:block truncate">
+                        <p className="text-[10px] lg:text-sm text-muted-foreground leading-tight mt-0.5 hidden sm:block truncate">
                           {card.description}
                         </p>
                       </div>

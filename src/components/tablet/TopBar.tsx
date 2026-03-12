@@ -125,7 +125,7 @@ export function TopBar({ profile, shopName }: TopBarProps) {
                     variant="ghost"
                     size="icon"
                     onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
-                    className={`h-8 w-8 rounded-lg transition-all ${s.btnAnimation}`}
+                    className={`h-8 w-8 rounded-lg transition-all active:bg-brand-500/20 dark:active:bg-brand-400/20 ${s.btnAnimation}`}
                   >
                     <Search className={`h-4 w-4 ${isDark ? 'text-slate-300/70' : 'text-muted-foreground'}`} />
                   </Button>
@@ -141,7 +141,7 @@ export function TopBar({ profile, shopName }: TopBarProps) {
                       variant="ghost"
                       size="icon"
                       onClick={toggleTheme}
-                      className={`h-8 w-8 rounded-lg transition-all ${s.btnAnimation}`}
+                      className={`h-8 w-8 rounded-lg transition-all active:bg-brand-500/20 dark:active:bg-brand-400/20 ${s.btnAnimation}`}
                     >
                       {isDark ? (
                         <Sun className="h-4 w-4 text-amber-300/70" />
@@ -161,7 +161,7 @@ export function TopBar({ profile, shopName }: TopBarProps) {
                     variant="ghost"
                     size="icon"
                     onClick={() => router.push('/settings')}
-                    className={`h-8 w-8 rounded-lg transition-all ${s.btnAnimation}`}
+                    className={`h-8 w-8 rounded-lg transition-all active:bg-brand-500/20 dark:active:bg-brand-400/20 ${s.btnAnimation}`}
                   >
                     <Settings className={`h-4 w-4 ${isDark ? 'text-slate-300/70' : 'text-muted-foreground'}`} />
                   </Button>

@@ -284,30 +284,30 @@ export function CheckoutDialog({
           </div>
 
           {/* Price Summary */}
-          <div className={`rounded-lg border-2 ${a.border} bg-gradient-to-r ${a.gradientSubtle} p-4 space-y-2.5`}>
+          <div className={`rounded-lg border-2 ${a.border} bg-gradient-to-r ${a.gradientSubtle} dark:from-brand-950/40 dark:to-brand-900/30 p-4 space-y-2.5`}>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal ({items.length} items)</span>
-              <span className="font-medium">{formatCurrency(subtotal)}</span>
+              <span className="text-muted-foreground dark:text-slate-400">Subtotal ({items.length} items)</span>
+              <span className="font-medium dark:text-slate-200">{formatCurrency(subtotal)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Tag className="h-3.5 w-3.5 text-green-600" />
+                <span className="flex items-center gap-1.5 text-muted-foreground dark:text-slate-400">
+                  <Tag className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                   Discount
                 </span>
-                <span className="font-semibold text-green-600">-{formatCurrency(discount)}</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">-{formatCurrency(discount)}</span>
               </div>
             )}
             {tax > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax (GST)</span>
-                <span className="font-medium">{formatCurrency(tax)}</span>
+                <span className="text-muted-foreground dark:text-slate-400">Tax (GST)</span>
+                <span className="font-medium dark:text-slate-200">{formatCurrency(tax)}</span>
               </div>
             )}
             <Separator className={a.border} />
             <div className="flex justify-between items-center">
-              <span className="text-base font-bold">Grand Total</span>
-              <span className={`text-xl font-bold ${a.text}`}>{formatCurrency(grandTotal)}</span>
+              <span className="text-base font-bold dark:text-white">Grand Total</span>
+              <span className={`text-xl font-bold ${a.text} dark:text-white`}>{formatCurrency(grandTotal)}</span>
             </div>
           </div>
 

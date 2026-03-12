@@ -11,7 +11,14 @@ export const addStockLotSchema = z
     size_id: z.string().min(1, 'Size is required'),
     free_text_size: z.string().optional().default(''),
     vendor_name: z.string().optional().default(''),
-    date_of_stock_arrival: z.string().min(1, 'Stock arrival date is required'),
+    date_of_stock_arrival: z.string().min(1, 'Stock arrival date is required')
+      .refine((val) => {
+        if (!val) return true;
+        const selected = new Date(val);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        return selected <= today;
+      }, 'Stock arrival date cannot be in the future'),
     quantity: z.coerce
       .number({ error: 'Quantity must be a number' })
       .int('Quantity must be a whole number')

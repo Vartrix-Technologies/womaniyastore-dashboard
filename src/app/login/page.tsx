@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import ParticleBackground from '@/components/ui/ParticleBackground';
 import { FieldError, fieldErrorClass, useFormErrors } from '@/components/shared/FieldError';
 import { appConfig } from '@/lib/config/app.config';
+import { Eye, EyeOff } from 'lucide-react';
 
 const s = appConfig.styles;
 const a = s.accent;
@@ -23,6 +24,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn, user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
   const { errors, validateFields, clearFieldError } = useFormErrors<'email' | 'password'>();
@@ -135,18 +137,28 @@ export default function LoginPage() {
             {/* Password Field */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
-                disabled={loading}
-                autoComplete="current-password"
-                className={`h-11 focus:ring-2 ${a.focusRing} ${a.focusBorder} transition-all ${fieldErrorClass(errors.password)}`}
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
+                  disabled={loading}
+                  autoComplete="current-password"
+                  className={`h-11 pr-10 focus:ring-2 ${a.focusRing} ${a.focusBorder} transition-all ${fieldErrorClass(errors.password)}`}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <FieldError message={errors.password} />
               <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
             </div>

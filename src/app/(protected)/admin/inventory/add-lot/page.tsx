@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft, Plus, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { appConfig } from '@/lib/config/app.config';
 import { formatCurrency } from '@/lib/formatters';
@@ -76,11 +76,29 @@ export default function AddStockLotPage() {
     },
   });
 
-  const watchedPrefixId = watch('prefix_id');
-  const watchedQuantity = watch('quantity');
-  const watchedCostPrice = watch('cost_price_per_unit');
-  const watchedSellingPrice = watch('selling_price_default');
-  const watchedSaleType = watch('sale_type');
+  // Subscribe to ALL form values so preview always reflects latest state
+  const allValues = watch();
+  const watchedPrefixId = allValues.prefix_id;
+  const watchedQuantity = allValues.quantity;
+  const watchedCostPrice = allValues.cost_price_per_unit;
+  const watchedSellingPrice = allValues.selling_price_default;
+  const watchedSaleType = allValues.sale_type;
+
+  // Today's date string for max constraint on arrival date
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Map field names to their DOM element IDs for scroll-to-error
+  const fieldIdMap: Record<string, string> = {
+    category_id: 'category',
+    prefix_id: 'prefix',
+    size_id: 'size',
+    date_of_stock_arrival: 'date',
+    quantity: 'quantity',
+    cost_price_per_unit: 'cost_price',
+    selling_price_default: 'selling_price',
+    tax_rate: 'tax_rate',
+    min_margin_percent: 'min_margin',
+  };
 
   useEffect(() => {
     if (profile?.shop_id) {
@@ -209,8 +227,11 @@ export default function AddStockLotPage() {
 
       const result = await addStockLot(requestPayload);
 
-      toast.success(`Successfully added ${result.items.length} items to inventory`, {
-        description: `QR Codes assigned: ${result.items.length}`,
+      const categoryName = categories.find(c => c.id === data.category_id)?.name || 'items';
+      const prefixLabel = qrPrefixes.find(p => p.id === data.prefix_id)?.prefix || '';
+
+      toast.success(`Successfully added ${result.items.length} ${categoryName} to inventory`, {
+        description: `QR prefix assigned: ${prefixLabel}`,
         duration: 4000
       });
       router.push('/admin/inventory');
@@ -292,9 +313,9 @@ export default function AddStockLotPage() {
             <div className="space-y-2">
               <div className="flex flex-row gap-3 items-center">
                 <Label htmlFor="prefix" className="text-sm">QR Prefix *</Label>
-              <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors">
-                    Can&apos;t see your QR prefix?
-                  </Link>
+                <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors">
+                  Can&apos;t see your QR prefix?
+                </Link>
               </div>
               {qrPrefixes.length === 0 ? (
                 <div className="text-sm text-muted-foreground border border-dashed rounded-md p-3">
@@ -383,25 +404,33 @@ export default function AddStockLotPage() {
             {/* Size and Custom Size in one row on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="size" className="text-sm">Size</Label>
-                <Controller
-                  name="size_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="size" className="text-sm">
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sizes.map((size) => (
-                          <SelectItem key={size.id} value={size.id} className="text-sm">
-                            {size.size_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                <Label htmlFor="size" className="text-sm">Size *</Label>
+                <div className="flex items-center gap-2">
+                  <Controller
+                    name="size_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="size" className={`text-sm ${errors.size_id ? 'border-red-500' : ''}`}>
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sizes.map((size) => (
+                            <SelectItem key={size.id} value={size.id} className="text-sm">
+                              {size.size_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <Link href="/settings?tab=sizes" title="Manage sizes">
+                    <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+                {errors.size_id && <p className="text-xs text-red-500">{errors.size_id.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -488,6 +517,7 @@ export default function AddStockLotPage() {
                 <Input
                   id="date"
                   type="date"
+                  max={todayStr}
                   {...register('date_of_stock_arrival')}
                   className={`text-sm ${errors.date_of_stock_arrival ? 'border-red-500' : ''}`}
                 />
@@ -502,7 +532,6 @@ export default function AddStockLotPage() {
                   min="1"
                   max={availableQrCount > 0 ? availableQrCount : undefined}
                   {...register('quantity')}
-                  placeholder="15"
                   className={`text-sm ${errors.quantity ? 'border-red-500' : ''}`}
                 />
                 {errors.quantity && <p className="text-xs text-red-500">{errors.quantity.message}</p>}
@@ -524,7 +553,6 @@ export default function AddStockLotPage() {
                   type="number"
                   step="0.01"
                   {...register('cost_price_per_unit')}
-                  placeholder="200.00"
                   className={`text-sm ${errors.cost_price_per_unit ? 'border-red-500' : ''}`}
                 />
                 {errors.cost_price_per_unit && <p className="text-xs text-red-500">{errors.cost_price_per_unit.message}</p>}
@@ -536,7 +564,6 @@ export default function AddStockLotPage() {
                   type="number"
                   step="0.01"
                   {...register('selling_price_default')}
-                  placeholder="500.00"
                   className={`text-sm ${errors.selling_price_default ? 'border-red-500' : ''}`}
                 />
                 {errors.selling_price_default && <p className="text-xs text-red-500">{errors.selling_price_default.message}</p>}
@@ -552,7 +579,6 @@ export default function AddStockLotPage() {
                   type="number"
                   step="0.01"
                   {...register('tax_rate')}
-                  placeholder="18"
                   className={`text-sm ${errors.tax_rate ? 'border-red-500' : ''}`}
                 />
                 {errors.tax_rate && <p className="text-xs text-red-500">{errors.tax_rate.message}</p>}
@@ -575,8 +601,8 @@ export default function AddStockLotPage() {
                     type="button"
                     onClick={() => { setValue('sale_type', ''); setValue('min_margin_percent', ''); setValue('sale_reason', ''); }}
                     className={`px-4 py-2 text-sm rounded-md border transition-all ${!watchedSaleType
-                        ? `${a.bg} ${a.borderStrong} ${a.text} font-medium`
-                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                      ? `${a.bg} ${a.borderStrong} ${a.text} font-medium`
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     Not on Sale
@@ -585,8 +611,8 @@ export default function AddStockLotPage() {
                     type="button"
                     onClick={() => setValue('sale_type', 'festival')}
                     className={`px-4 py-2 text-sm rounded-md border transition-all ${watchedSaleType === 'festival'
-                        ? 'bg-green-50 border-green-500 text-green-700 font-medium'
-                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                      ? 'bg-green-50 border-green-500 text-green-700 font-medium'
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     Festival Sale
@@ -595,8 +621,8 @@ export default function AddStockLotPage() {
                     type="button"
                     onClick={() => setValue('sale_type', 'promotion')}
                     className={`px-4 py-2 text-sm rounded-md border transition-all ${watchedSaleType === 'promotion'
-                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-medium'
-                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 font-medium'
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     Promotional Sale
@@ -643,19 +669,47 @@ export default function AddStockLotPage() {
 
             {/* Preview / Submit */}
             {!showPreview ? (
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button
-                  type="button"
-                  onClick={handleSubmit(() => setShowPreview(true))}
-                  disabled={submitting}
-                  className={`flex-1 ${s.primaryGradient} ${s.primaryGradientHover} transition-all ${s.btnAnimation}`}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Preview &amp; Add
-                </Button>
-                <Button type="button" variant="outline" asChild className={`sm:w-auto transition-all ${s.btnAnimation}`}>
-                  <Link href="/admin/inventory">Cancel</Link>
-                </Button>
+              <div className="space-y-2 pt-4">
+                {Object.keys(errors).length > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>
+                      Please fix {Object.keys(errors).length} {Object.keys(errors).length === 1 ? 'error' : 'errors'} above before previewing
+                    </span>
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    type="button"
+                    onClick={handleSubmit(
+                      () => setShowPreview(true),
+                      (fieldErrors) => {
+                        const errorCount = Object.keys(fieldErrors).length;
+                        toast.error(
+                          `Please fix ${errorCount} ${errorCount === 1 ? 'error' : 'errors'} before previewing`,
+                          { description: 'Required fields are highlighted in red' }
+                        );
+                        // Scroll to first error field (use ID map for Controller fields)
+                        const firstErrorKey = Object.keys(fieldErrors)[0];
+                        const domId = fieldIdMap[firstErrorKey] || firstErrorKey;
+                        const el = document.getElementById(domId) ||
+                                   document.querySelector(`[name="${firstErrorKey}"]`);
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          if (el instanceof HTMLElement) el.focus();
+                        }
+                      }
+                    )}
+                    disabled={submitting}
+                    className={`flex-1 ${s.primaryGradient} ${s.primaryGradientHover} transition-all ${s.btnAnimation}`}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview &amp; Add
+                  </Button>
+                  <Button type="button" variant="outline" asChild className={`sm:w-auto transition-all ${s.btnAnimation}`}>
+                    <Link href="/admin/inventory">Cancel</Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4 pt-4">
@@ -663,60 +717,64 @@ export default function AddStockLotPage() {
                 <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Eye className="h-4 w-4" /> Lot Preview
+                    <span className="ml-auto flex items-center gap-1 text-[10px] font-normal text-muted-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                      Live
+                    </span>
                   </h3>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     <span className="text-muted-foreground">QR Prefix</span>
-                    <span className="font-mono font-bold">{qrPrefixes.find(p => p.id === watchedPrefixId)?.prefix || '—'}</span>
+                    <span className="font-mono font-bold">{qrPrefixes.find(p => p.id === allValues.prefix_id)?.prefix || '—'}</span>
 
                     <span className="text-muted-foreground">Category</span>
-                    <span>{categories.find(c => c.id === watch('category_id'))?.name || '—'}</span>
+                    <span>{categories.find(c => c.id === allValues.category_id)?.name || '—'}</span>
 
                     <span className="text-muted-foreground">Size</span>
-                    <span>{watch('free_text_size') || sizes.find(sz => sz.id === watch('size_id'))?.size_name || '—'}</span>
+                    <span>{allValues.free_text_size || sizes.find(sz => sz.id === allValues.size_id)?.size_name || '—'}</span>
 
                     <span className="text-muted-foreground">Vendor</span>
-                    <span>{watch('vendor_name') || '—'}</span>
+                    <span>{allValues.vendor_name || '—'}</span>
 
                     <span className="text-muted-foreground">Arrival Date</span>
-                    <span>{watch('date_of_stock_arrival') || '—'}</span>
+                    <span>{allValues.date_of_stock_arrival || '—'}</span>
 
                     <span className="text-muted-foreground">Quantity</span>
-                    <span className="font-semibold">{watchedQuantity || '—'}</span>
+                    <span className="font-semibold">{allValues.quantity || '—'}</span>
 
                     <span className="text-muted-foreground">Cost Price</span>
-                    <span>{formatCurrency(Number(watch('cost_price_per_unit')) || 0)}</span>
+                    <span>{formatCurrency(Number(allValues.cost_price_per_unit) || 0)}</span>
 
                     <span className="text-muted-foreground">Selling Price</span>
-                    <span className="font-semibold">{formatCurrency(Number(watch('selling_price_default')) || 0)}</span>
+                    <span className="font-semibold">{formatCurrency(Number(allValues.selling_price_default) || 0)}</span>
 
                     <span className="text-muted-foreground">Tax Rate</span>
-                    <span>{watch('tax_rate') || 0}%</span>
+                    <span>{allValues.tax_rate || 0}%</span>
 
-                    {watchedSaleType && (
+                    {allValues.sale_type && (
                       <>
                         <span className="text-muted-foreground">Sale Type</span>
-                        <span><Badge variant="secondary" className="text-xs">{watchedSaleType}</Badge></span>
+                        <span><Badge variant="secondary" className="text-xs">{allValues.sale_type}</Badge></span>
 
-                        {watch('min_margin_percent') && (
+                        {allValues.min_margin_percent && (
                           <>
                             <span className="text-muted-foreground">Min Margin</span>
-                            <span>{watch('min_margin_percent')}%</span>
+                            <span>{allValues.min_margin_percent}%</span>
                           </>
                         )}
-                        {watch('sale_reason') && (
+                        {allValues.sale_reason && (
                           <>
                             <span className="text-muted-foreground">Sale Reason</span>
-                            <span>{watch('sale_reason')}</span>
+                            <span>{allValues.sale_reason}</span>
                           </>
                         )}
                       </>
                     )}
 
                     <span className="text-muted-foreground">Profit Margin</span>
-                    <span className={`font-semibold ${Number(watch('selling_price_default')) > Number(watch('cost_price_per_unit')) ? 'text-green-600' : 'text-red-600'
+                    <span className={`font-semibold ${Number(allValues.selling_price_default) > Number(allValues.cost_price_per_unit) ? 'text-green-600' : 'text-red-600'
                       }`}>
-                      {Number(watch('cost_price_per_unit')) > 0
-                        ? `${(((Number(watch('selling_price_default')) - Number(watch('cost_price_per_unit'))) / Number(watch('cost_price_per_unit'))) * 100).toFixed(1)}%`
+                      {Number(allValues.cost_price_per_unit) > 0
+                        ? `${(((Number(allValues.selling_price_default) - Number(allValues.cost_price_per_unit)) / Number(allValues.cost_price_per_unit)) * 100).toFixed(1)}%`
                         : '—'}
                     </span>
                   </div>
