@@ -187,6 +187,15 @@ function InventoryPageContent() {
     // Perform actual deletion in background
     const doDelete = async () => {
       try {
+        // Delete inventory item FIRST (it holds the FK to qr_codes)
+        const { error: itemError } = await supabase
+          .from('inventory_items')
+          .delete()
+          .eq('id', item.id);
+
+        if (itemError) throw itemError;
+
+        // Then delete the orphaned QR code
         if (item.qr_codes?.id) {
           const { error: qrError } = await supabase
             .from('qr_codes')
@@ -195,13 +204,6 @@ function InventoryPageContent() {
 
           if (qrError) throw qrError;
         }
-
-        const { error: itemError } = await supabase
-          .from('inventory_items')
-          .delete()
-          .eq('id', item.id);
-
-        if (itemError) throw itemError;
 
         // Refresh stats from server to ensure accuracy
         refreshStats();

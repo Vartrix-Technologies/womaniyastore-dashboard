@@ -98,3 +98,51 @@ Group hover reveals delete button
 Focus rings on form inputs
 Gradient backgrounds that intensify on hover
 The design now matches professional POS systems like Square or Shopify with attention to spacing, typography, and interactive feedback.
+
+
+
+
+
+-- Drop functions with CASCADE (drops dependent policies too)
+DROP FUNCTION IF EXISTS generate_bill_number(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.current_profile() CASCADE;
+DROP FUNCTION IF EXISTS public."current_role"() CASCADE;
+DROP FUNCTION IF EXISTS public.current_shop_id() CASCADE;
+DROP FUNCTION IF EXISTS public.is_admin() CASCADE;
+DROP FUNCTION IF EXISTS public.is_staff_or_higher() CASCADE;
+DROP FUNCTION IF EXISTS public.is_superadmin() CASCADE;
+
+-- Drop views
+DROP VIEW IF EXISTS user_profiles CASCADE;
+
+-- Drop tables
+DROP TABLE IF EXISTS checklist_items CASCADE;
+DROP TABLE IF EXISTS checklists CASCADE;
+DROP TABLE IF EXISTS attendance_logs CASCADE;
+DROP TABLE IF EXISTS inventory_adjustments CASCADE;
+DROP TABLE IF EXISTS sale_returns CASCADE;
+DROP TABLE IF EXISTS sale_items CASCADE;
+DROP TABLE IF EXISTS inventory_items CASCADE;
+DROP TABLE IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS qr_codes CASCADE;
+DROP TABLE IF EXISTS lots CASCADE;
+DROP TABLE IF EXISTS sizes CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS tax_settings CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+DROP TABLE IF EXISTS shops CASCADE;
+
+-- Drop enums
+DROP TYPE IF EXISTS user_role;
+DROP TYPE IF EXISTS attendance_status;
+DROP TYPE IF EXISTS checklist_item_status;
+DROP TYPE IF EXISTS checklist_status;
+DROP TYPE IF EXISTS financial_tx_type;
+DROP TYPE IF EXISTS inventory_status;
+DROP TYPE IF EXISTS qr_status;
+
+-- Clear migration history
+DELETE FROM supabase_migrations.schema_migrations;
+
+
+supabase db push --include all
