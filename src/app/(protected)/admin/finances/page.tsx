@@ -259,7 +259,7 @@ function FinancesPageContent() {
           .from('inventory_items')
           .select(`
             id,
-            lot:lots(cost_price_per_unit)
+            cost_price
           `)
           .eq('shop_id', profile.shop_id)
           .eq('status', 'available'),
@@ -277,7 +277,7 @@ function FinancesPageContent() {
       const totalRevenue = (salesData as any[])?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
       const totalRefunds = (returnsData as any[])?.reduce((sum, r) => sum + (r.refund_amount || 0), 0) || 0;
       const totalExpenses = (statsTransData as any[])?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-      const inventoryValue = (inventoryData as any[])?.reduce((sum, item) => sum + (item.lot?.cost_price_per_unit || 0), 0) || 0;
+      const inventoryValue = (inventoryData as any[])?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
       const netRevenue = totalRevenue - totalRefunds;
 
       const newSummary = {

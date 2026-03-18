@@ -66,14 +66,14 @@ export async function cacheScannedItem(scanResult: {
       qrCode: scanResult.qrCode.code,
       itemId: scanResult.inventoryItem.id,
       lotId: scanResult.lot.id,
-      price: scanResult.lot.selling_price_default,
+      price: scanResult.inventoryItem.selling_price ?? scanResult.lot.selling_price_default,
       category: scanResult.category?.name || 'Unknown',
       size: scanResult.size?.size_name || scanResult.lot.free_text_size || 'One Size',
-      taxRate: scanResult.lot.tax_rate || 0,
+      taxRate: scanResult.inventoryItem.tax_rate ?? scanResult.lot.tax_rate ?? 0,
       lastUpdated: new Date().toISOString(),
-      lotSaleType: scanResult.lot.sale_type,
+      lotSaleType: scanResult.inventoryItem.sale_type ?? scanResult.lot.sale_type,
       lotMinMargin: scanResult.lot.min_margin_percent,
-      lotCostPrice: scanResult.lot.cost_price_per_unit,
+      lotCostPrice: scanResult.inventoryItem.cost_price ?? scanResult.lot.cost_price_per_unit,
       shopId: scanResult.lot.shop_id,
     };
 
@@ -211,7 +211,7 @@ export async function fetchInventoryForCache(
     const query = supabase
       .from('inventory_items')
       .select(`
-        id, status,
+        id, status, selling_price, cost_price, tax_rate, sale_type,
         lot:lots!inner (
           id, selling_price_default, tax_rate, sale_type,
           min_margin_percent, cost_price_per_unit, shop_id,
@@ -248,14 +248,14 @@ export async function fetchInventoryForCache(
         qrCode: qrCode.code,
         itemId: item.id,
         lotId: lot.id,
-        price: lot.selling_price_default || 0,
+        price: (item as any).selling_price ?? lot.selling_price_default ?? 0,
         category: lot.category?.name || 'Unknown',
         size: lot.size?.size_name || lot.free_text_size || 'One Size',
-        taxRate: lot.tax_rate || 0,
+        taxRate: (item as any).tax_rate ?? lot.tax_rate ?? 0,
         lastUpdated: new Date().toISOString(),
-        lotSaleType: lot.sale_type,
+        lotSaleType: (item as any).sale_type ?? lot.sale_type,
         lotMinMargin: lot.min_margin_percent,
-        lotCostPrice: lot.cost_price_per_unit,
+        lotCostPrice: (item as any).cost_price ?? lot.cost_price_per_unit,
         shopId: lot.shop_id,
       });
     }

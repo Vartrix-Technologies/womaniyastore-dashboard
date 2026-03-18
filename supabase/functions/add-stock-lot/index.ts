@@ -224,12 +224,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 4. Create inventory items
+    // 4. Create inventory items (with item-level pricing + sale type copied from lot)
     const inventoryItems = qrCodes.map((qr) => ({
       shop_id: profile.shop_id,
       lot_id: lot.id,
       qr_code_id: qr.id,
       status: 'available',
+      selling_price: lot.selling_price_default,
+      cost_price: lot.cost_price_per_unit,
+      tax_rate: lot.tax_rate || 0,
+      sale_type: lot.sale_type || null,
+      sale_reason: lot.sale_reason || null,
     }))
 
     const { data: createdItems, error: itemsError } = await supabase

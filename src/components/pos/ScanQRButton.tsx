@@ -221,18 +221,18 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
         inventoryItemId: itemData.id,
         category: itemData.lot?.category?.name || 'Unknown',
         size: itemData.lot?.size?.size_name || itemData.lot?.free_text_size || 'N/A',
-        originalPrice: itemData.lot?.selling_price_default || 0,
-        finalPrice: itemData.lot?.selling_price_default || 0,
-        taxRate: itemData.lot?.tax_rate || 0,
+        originalPrice: itemData.selling_price || 0,
+        finalPrice: itemData.selling_price || 0,
+        taxRate: itemData.tax_rate || 0,
         lotId: itemData.lot_id,
         // Sale info from lot
-        lotSaleType: itemData.lot?.sale_type,
+        lotSaleType: itemData.sale_type ?? itemData.lot?.sale_type,
         lotMinMargin: itemData.lot?.min_margin_percent ?? undefined,
-        lotSaleReason: itemData.lot?.sale_reason,
-        lotCostPrice: itemData.lot?.cost_price_per_unit ?? undefined,
-        // Initialize sale state from lot
-        soldOnSale: !!itemData.lot?.sale_type,
-        saleType: itemData.lot?.sale_type || undefined,
+        lotSaleReason: itemData.sale_reason ?? itemData.lot?.sale_reason,
+        lotCostPrice: itemData.cost_price ?? undefined,
+        // Initialize sale state from item-level sale_type (with lot fallback)
+        soldOnSale: !!(itemData.sale_type ?? itemData.lot?.sale_type),
+        saleType: (itemData.sale_type ?? itemData.lot?.sale_type) || undefined,
       };
 
       // Sold-items are already rejected:

@@ -28,6 +28,11 @@ export interface EditableInventoryItem {
   sold_at: string | null;
   created_at: string;
   shop_id?: string;
+  selling_price?: number;
+  cost_price?: number;
+  tax_rate?: number;
+  sale_type?: string | null;
+  sale_reason?: string | null;
   qr_codes: { code: string; id: string } | null;
   lots?: {
     id: string;
@@ -60,6 +65,11 @@ export function EditInventoryItemDialog({ item, lot: lotProp, onClose, onSaved }
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string>('available');
   const [reason, setReason] = useState('');
+  const [sellingPrice, setSellingPrice] = useState('');
+  const [costPrice, setCostPrice] = useState('');
+  const [taxRate, setTaxRate] = useState('');
+  const [saleType, setSaleType] = useState<string>('none');
+  const [saleReason, setSaleReason] = useState('');
 
   // Derive lot context from prop or from item.lots
   const lotCtx = lotProp ?? (item?.lots ? {
@@ -74,32 +84,58 @@ export function EditInventoryItemDialog({ item, lot: lotProp, onClose, onSaved }
     if (item) {
       setStatus(item.status);
       setReason('');
+      setSellingPrice(String(item.selling_price ?? item.lots?.selling_price_default ?? 0));
+      setCostPrice(String(item.cost_price ?? item.lots?.cost_price_per_unit ?? 0));
+      setTaxRate(String(item.tax_rate ?? item.lots?.tax_rate ?? 0));
+      setSaleType((item.sale_type ?? item.lots?.sale_type) || 'none');
+      setSaleReason((item.sale_reason ?? item.lots?.sale_reason) || '');
     }
   }, [item]);
 
   if (!item || !lotCtx) return null;
 
   const statusChanged = status !== item.status;
-  const hasChanges = statusChanged;
+  const priceChanged = Number(sellingPrice) !== (item.selling_price ?? item.lots?.selling_price_default ?? 0)
+    || Number(costPrice) !== (item.cost_price ?? item.lots?.cost_price_per_unit ?? 0)
+    || Number(taxRate) !== (item.tax_rate ?? item.lots?.tax_rate ?? 0);
+  const currentSaleType = (item.sale_type ?? item.lots?.sale_type) || 'none';
+  const currentSaleReason = (item.sale_reason ?? item.lots?.sale_reason) || '';
+  const saleTypeChanged = saleType !== currentSaleType || saleReason !== currentSaleReason;
+  const hasChanges = statusChanged || priceChanged || saleTypeChanged;
 
   const handleSave = async () => {
     if (statusChanged && status === 'damaged' && !reason.trim()) {
       toast.error('Please provide a reason for marking as damaged');
       return;
     }
+    if (Number(sellingPrice) <= 0) {
+      toast.error('Selling price must be positive');
+      return;
+    }
 
     setSaving(true);
     try {
-      // Status change via edge function (for audit trail)
-      const { data, error } = await supabase.functions.invoke('adjust-inventory', {
-        body: {
-          inventory_item_id: item.id,
-          new_status: status,
-          reason: reason || `Status changed to ${status}`,
-        },
-      });
+      const updatePayload: Record<string, unknown> = {
+        status,
+        selling_price: Number(sellingPrice),
+        cost_price: Number(costPrice),
+        tax_rate: Number(taxRate) || 0,
+        sale_type: saleType === 'none' ? null : saleType,
+        sale_reason: saleType === 'none' ? null : (saleReason.trim() || null),
+      };
+      // Clear sold_at when reverting from sold, set it when marking sold
+      if (status === 'sold') {
+        updatePayload.sold_at = new Date().toISOString();
+      } else if (item.status === 'sold' && status !== 'sold') {
+        updatePayload.sold_at = null;
+      }
+
+      const { error } = await supabase
+        .from('inventory_items')
+        .update(updatePayload)
+        .eq('id', item.id);
+
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       toast.success(`Item ${item.qr_codes?.code || ''} updated`, {
         description: `Status → ${status}`,
@@ -123,7 +159,7 @@ export function EditInventoryItemDialog({ item, lot: lotProp, onClose, onSaved }
             <div className={`p-1.5 rounded-md ${s.headerIconGradient} text-white shadow-sm`}>
               <Pencil className="h-4 w-4" />
             </div>
-            Edit Item Status
+            Edit Item
           </DialogTitle>
           <DialogDescription asChild>
             <div className="flex items-center gap-2 flex-wrap mt-1">
@@ -151,11 +187,77 @@ export function EditInventoryItemDialog({ item, lot: lotProp, onClose, onSaved }
               <span className="text-muted-foreground text-xs">Size</span>
               <span className="font-medium text-xs">{lotCtx.size_name}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-xs">Selling Price</span>
-              <span className="font-medium text-xs tabular-nums">{formatCurrency(lotCtx.selling_price_default)}</span>
+          </div>
+
+          {/* Pricing */}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Selling Price *</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={sellingPrice}
+                onChange={e => setSellingPrice(e.target.value)}
+                className="text-sm"
+                disabled={item.status === 'sold'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Cost Price</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={costPrice}
+                onChange={e => setCostPrice(e.target.value)}
+                className="text-sm"
+                disabled={item.status === 'sold'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tax Rate (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={taxRate}
+                onChange={e => setTaxRate(e.target.value)}
+                className="text-sm"
+                disabled={item.status === 'sold'}
+              />
             </div>
           </div>
+
+          {/* Sale Type */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sale Type</Label>
+            <Select value={saleType} onValueChange={setSaleType} disabled={item.status === 'sold'}>
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none" className="text-sm">Normal (no sale)</SelectItem>
+                <SelectItem value="festival" className="text-sm">Festival</SelectItem>
+                <SelectItem value="clearance" className="text-sm">Clearance</SelectItem>
+                <SelectItem value="promotion" className="text-sm">Promotion</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {saleType !== 'none' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sale Reason</Label>
+              <Input
+                value={saleReason}
+                onChange={e => setSaleReason(e.target.value)}
+                placeholder={`e.g. Summer ${saleType} sale`}
+                className="text-sm"
+                disabled={item.status === 'sold'}
+              />
+            </div>
+          )}
 
           {/* Status change */}
           <div className="space-y-1.5">

@@ -224,12 +224,9 @@ Deno.serve(async (req: Request) => {
           status,
           sold_at,
           lot_id,
-          lots (
-            tax_rate,
-            sale_type,
-            min_margin_percent,
-            cost_price_per_unit
-          )
+          selling_price,
+          cost_price,
+          tax_rate
         `)
         .eq('qr_code_id', qrCode.id)
         .eq('shop_id', profile.shop_id)
@@ -273,31 +270,8 @@ Deno.serve(async (req: Request) => {
         qr_code: qrCode,
         inventory_item: inventoryItem,
         sale_item: item,
-        tax_rate: inventoryItem.lots?.tax_rate || 0,
+        tax_rate: inventoryItem.tax_rate || 0,
       })
-      
-      // NEW: Validate festival sale margin protection server-side
-      if (item.sold_on_sale && item.sale_type === 'festival') {
-        const lot = inventoryItem.lots
-        if (lot && lot.min_margin_percent && lot.cost_price_per_unit) {
-          const minPrice = lot.cost_price_per_unit * (1 + lot.min_margin_percent / 100)
-          if (item.final_price < minPrice) {
-            return new Response(
-              JSON.stringify({
-                error: `Festival item ${item.qr_code} price ₹${item.final_price} is below minimum margin. Required: ₹${minPrice.toFixed(2)}`,
-                code: 'MARGIN_VIOLATION',
-                details: { 
-                  qr_code: item.qr_code,
-                  final_price: item.final_price,
-                  min_price: minPrice,
-                  min_margin: lot.min_margin_percent
-                },
-              }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            )
-          }
-        }
-      }
     }
 
     // 2. Calculate totals
@@ -471,10 +445,10 @@ Deno.serve(async (req: Request) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } catch (error: any) {
+  } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error?.message || String(error) }),
+      JSON.stringify({ error: 'Internal server error', details: (error as any)?.message || String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

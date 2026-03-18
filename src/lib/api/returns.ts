@@ -341,6 +341,24 @@ export async function createReturn(request: CreateReturnRequest): Promise<SaleRe
     console.warn(`Warning: Only ${updatedItems.length} of ${inventoryItemIds.length} items were updated.`);
   }
 
+  // 4. Reset QR code status back to 'assigned' so items can be re-scanned
+  const { data: itemsWithQr } = await supabase
+    .from('inventory_items')
+    .select('qr_code_id')
+    .in('id', inventoryItemIds);
+
+  const qrCodeIds = (itemsWithQr || []).map(i => i.qr_code_id).filter(Boolean) as string[];
+  if (qrCodeIds.length > 0) {
+    const { error: qrError } = await supabase
+      .from('qr_codes')
+      .update({ status: 'assigned' })
+      .in('id', qrCodeIds);
+
+    if (qrError) {
+      console.warn('Warning: Failed to reset QR code status:', qrError);
+    }
+  }
+
   return returnData as SaleReturn;
 }
 

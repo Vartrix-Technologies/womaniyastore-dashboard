@@ -391,12 +391,15 @@
 |---|-----------|-------|-----------------|----------|
 | 5.6.1 | Actions dropdown opens | Click actions (⋮) button on a row | Dropdown shows: View Details, Edit Item, Edit Lot, Lot History, Add to Cart, Delete | 🟠 |
 | 5.6.2 | View Details | Click "View Details" | InventoryItemDetailsDialog opens with full read-only info | 🟡 |
-| 5.6.3 | Edit Item — open dialog | Click "Edit Item" | EditInventoryItemDialog opens with status select and reason field | 🟠 |
+| 5.6.3 | Edit Item — open dialog | Click "Edit Item" | EditInventoryItemDialog opens with status, selling price, cost price, tax rate fields | 🟠 |
 | 5.6.4 | Edit Item — change status | Change status from "available" to "damaged", enter reason, save | Button shows spinner + "Saving…"; status updates in table after save; success toast | 🟠 |
+| 5.6.4a | Edit Item — change price | Change selling price for an available item, save | Item price updates; selling price column reflects new price; success toast | 🟠 |
+| 5.6.4b | Edit Item — sold item prices read-only | Open edit for a sold item | Price fields are disabled (sold items retain price at time of sale) | 🟠 |
 | 5.6.5 | Edit Item — save disabled when no changes | Open edit dialog, don't change anything | Save button is disabled (no unnecessary saves) | 🟡 |
 | 5.6.6 | Edit Item — reason required for damaged | Select "damaged" but leave reason empty | Cannot save; error shown that reason is required | 🟠 |
 | 5.6.7 | Edit Lot — open dialog | Click "Edit Lot" | EditLotDialog opens with lot fields pre-populated | 🟠 |
-| 5.6.8 | Edit Lot — change price | Change selling price, save | Price updates for all items in the lot; success toast | 🟠 |
+| 5.6.8 | Edit Lot — change price | Change selling price, save | Lot template updated AND all available items' prices bulk-updated; success toast | 🟠 |
+| 5.6.8a | Edit Lot — sold items unchanged | Edit lot price when lot has sold items | Sold items retain their original price; only available items get new price | 🟠 |
 | 5.6.9 | Edit Lot — profit margin display | Change cost or selling price | Live profit margin percentage shown and recalculated | 🟡 |
 | 5.6.10 | Edit Lot — sold items warning | Edit a lot that has sold items | Warning message: "Some items already sold" | 🟡 |
 | 5.6.11 | Edit Lot — validation | Remove category (required), try to save | Error on category field; cannot save | 🟡 |

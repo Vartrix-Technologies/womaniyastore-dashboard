@@ -66,6 +66,11 @@ export interface InventoryItemForList {
   sold_at: string | null;
   created_at: string;
   shop_id: string;
+  selling_price: number;
+  cost_price: number;
+  tax_rate: number;
+  sale_type: string | null;
+  sale_reason: string | null;
   qr_codes: {
     code: string;
     id: string;

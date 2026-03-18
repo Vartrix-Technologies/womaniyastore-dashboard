@@ -39,6 +39,11 @@ interface SearchResult {
   id: string;
   qr_code_id: string;
   status: string;
+  selling_price: number;
+  cost_price: number;
+  tax_rate: number;
+  sale_type?: string | null;
+  sale_reason?: string | null;
   lot: {
     id: string;
     selling_price_default: number;
@@ -188,10 +193,10 @@ export function ProductSearchDialog({
     const min = parseFloat(minPrice);
     const max = parseFloat(maxPrice);
     if (!isNaN(min)) {
-      filtered = filtered.filter(item => item.lot?.selling_price_default >= min);
+      filtered = filtered.filter(item => item.selling_price >= min);
     }
     if (!isNaN(max)) {
-      filtered = filtered.filter(item => item.lot?.selling_price_default <= max);
+      filtered = filtered.filter(item => item.selling_price <= max);
     }
 
     setResults(filtered);
@@ -229,6 +234,9 @@ export function ProductSearchDialog({
           id: item.itemId,
           qr_code_id: '',
           status: 'available',
+          selling_price: item.price,
+          cost_price: item.lotCostPrice || 0,
+          tax_rate: item.taxRate,
           lot: {
             id: item.lotId,
             selling_price_default: item.price,
@@ -263,6 +271,8 @@ export function ProductSearchDialog({
 
       const selectForQR = `
         id, qr_code_id, status, sold_at,
+        selling_price, cost_price, tax_rate,
+        sale_type, sale_reason,
         lot:lots (
           id, selling_price_default, tax_rate, sale_type,
           min_margin_percent, sale_reason, cost_price_per_unit,
@@ -275,6 +285,8 @@ export function ProductSearchDialog({
 
       const selectDefault = `
         id, qr_code_id, status, sold_at,
+        selling_price, cost_price, tax_rate,
+        sale_type, sale_reason,
         lot:lots (
           id, selling_price_default, tax_rate, sale_type,
           min_margin_percent, sale_reason, cost_price_per_unit,
@@ -376,18 +388,18 @@ export function ProductSearchDialog({
       inventoryItemId: result.id,
       category: categoryName,
       size: sizeName,
-      originalPrice: lot.selling_price_default,
-      finalPrice: lot.selling_price_default,
-      taxRate: lot.tax_rate || 0,
+      originalPrice: result.selling_price,
+      finalPrice: result.selling_price,
+      taxRate: result.tax_rate || 0,
       lotId: lot.id,
-      // Sale info from lot
-      lotSaleType: lot.sale_type,
+      // Sale info — prefer item-level, fallback to lot
+      lotSaleType: result.sale_type ?? lot.sale_type,
       lotMinMargin: lot.min_margin_percent ?? undefined,
-      lotSaleReason: lot.sale_reason,
-      lotCostPrice: lot.cost_price_per_unit ?? undefined,
-      // Initialize sale state from lot
-      soldOnSale: !!lot.sale_type,
-      saleType: lot.sale_type || undefined,
+      lotSaleReason: result.sale_reason ?? lot.sale_reason,
+      lotCostPrice: result.cost_price ?? undefined,
+      // Initialize sale state from item-level sale_type (with lot fallback)
+      soldOnSale: !!(result.sale_type ?? lot.sale_type),
+      saleType: (result.sale_type ?? lot.sale_type) || undefined,
     };
 
     onAddToCart(cartItem);
@@ -469,15 +481,15 @@ export function ProductSearchDialog({
         inventoryItemId: itemData.id,
         category: itemData.lot?.category?.name || 'Unknown',
         size: itemData.lot?.size?.size_name || itemData.lot?.free_text_size || 'N/A',
-        originalPrice: itemData.lot?.selling_price_default || 0,
-        finalPrice: itemData.lot?.selling_price_default || 0,
-        taxRate: itemData.lot?.tax_rate || 0,
+        originalPrice: itemData.selling_price || 0,
+        finalPrice: itemData.selling_price || 0,
+        taxRate: itemData.tax_rate || 0,
         lotId: itemData.lot_id,
         // Sale info from lot
         lotSaleType: itemData.lot?.sale_type,
         lotMinMargin: itemData.lot?.min_margin_percent,
         lotSaleReason: itemData.lot?.sale_reason,
-        lotCostPrice: itemData.lot?.cost_price_per_unit,
+        lotCostPrice: itemData.cost_price,
         // Initialize sale state from lot
         soldOnSale: !!itemData.lot?.sale_type,
         saleType: itemData.lot?.sale_type || undefined,
@@ -800,7 +812,7 @@ export function ProductSearchDialog({
                               {result.qr_code.code}
                             </div>
                             <div className={`text-sm font-bold ${s.linkColor} mt-0.5`}>
-                              {formatCurrency(lot.selling_price_default)}
+                              {formatCurrency(result.selling_price)}
                             </div>
                           </div>
 

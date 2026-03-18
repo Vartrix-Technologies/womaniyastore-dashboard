@@ -491,34 +491,49 @@ export type Database = {
       }
       inventory_items: {
         Row: {
+          cost_price: number
           created_at: string
           id: string
           lot_id: string
           qr_code_id: string
           sale_item_id: string | null
+          sale_reason: string | null
+          sale_type: string | null
+          selling_price: number
           shop_id: string
           sold_at: string | null
           status: Database["public"]["Enums"]["inventory_status"]
+          tax_rate: number
         }
         Insert: {
+          cost_price: number
           created_at?: string
           id?: string
           lot_id: string
           qr_code_id: string
           sale_item_id?: string | null
+          sale_reason?: string | null
+          sale_type?: string | null
+          selling_price: number
           shop_id: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["inventory_status"]
+          tax_rate?: number
         }
         Update: {
+          cost_price?: number
           created_at?: string
           id?: string
           lot_id?: string
           qr_code_id?: string
           sale_item_id?: string | null
+          sale_reason?: string | null
+          sale_type?: string | null
+          selling_price?: number
           shop_id?: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["inventory_status"]
+          tax_rate?: number
         }
         Relationships: [
           {

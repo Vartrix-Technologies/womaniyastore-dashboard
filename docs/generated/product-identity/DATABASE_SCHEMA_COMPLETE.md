@@ -253,7 +253,7 @@
 
 ### inventory_items
 
-**Purpose**: Individual inventory units (one per QR code)
+**Purpose**: Individual inventory units (one per QR code). Each item stores its own pricing and sale type, copied from the lot at creation time.
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -262,6 +262,11 @@
 | `lot_id` | `uuid` | No | - | Foreign key to lots (which batch) |
 | `qr_code_id` | `uuid` | No | - | Foreign key to qr_codes (unique QR) |
 | `status` | `inventory_status` | No | `'available'` | Enum: available, reserved, sold, damaged, returned |
+| `selling_price` | `numeric` | No | - | Item selling price (copied from lot at creation, editable per-item) |
+| `cost_price` | `numeric` | No | - | Item cost price (copied from lot at creation) | 
+| `tax_rate` | `numeric` | No | `0` | Tax percentage (copied from lot at creation) |
+| `sale_type` | `text` | Yes | `null` | Sale classification: 'festival', 'clearance', 'promotion', or null for normal. Copied from lot, editable per-item |
+| `sale_reason` | `text` | Yes | `null` | Free-text description of the sale (e.g. "Summer clearance"). Copied from lot, editable per-item |
 | `sale_item_id` | `uuid` | Yes | `null` | Foreign key to sale_items (if sold) |
 | `sold_at` | `timestamp` | Yes | `null` | Timestamp when sold |
 | `created_at` | `timestamp` | No | `now()` | Record creation timestamp |
@@ -275,10 +280,18 @@
 **Unique Constraints**:
 - `qr_code_id` is unique (one QR per item)
 
+**Pricing Architecture**:
+- Prices are copied from the lot to each item at creation (one-way snapshot)
+- Editing a lot's price bulk-updates all available items in that lot
+- Individual item prices can be edited independently via EditInventoryItemDialog
+- Sold items retain the price they had at time of sale (immutable after sale)
+- Price flow: LOT → INVENTORY_ITEM (copy) → CART_ITEM (read) → SALE_ITEM (snapshot)
+
 **Use Cases**:
 - Track individual items
 - QR code scanning at POS
 - Inventory status management
+- Per-item pricing overrides
 - Sales linkage
 
 ---

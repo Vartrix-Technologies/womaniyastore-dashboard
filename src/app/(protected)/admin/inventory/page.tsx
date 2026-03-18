@@ -257,9 +257,9 @@ function InventoryPageContent() {
       }
 
       // Build query with filters
-      // Use !inner join on lots when filtering by sale_type or category
+      // Use !inner join on lots when filtering by category
       // so PostgREST excludes parent rows that don't match the filter
-      const needsInnerLots = saleTypeFilter !== 'all' || categoryFilter !== 'all';
+      const needsInnerLots = categoryFilter !== 'all';
       const lotsJoin = needsInnerLots ? 'lots!inner' : 'lots';
       let query = supabase
         .from('inventory_items')
@@ -269,6 +269,11 @@ function InventoryPageContent() {
           status,
           sold_at,
           created_at,
+          selling_price,
+          cost_price,
+          tax_rate,
+          sale_type,
+          sale_reason,
           qr_codes (code, id),
           ${lotsJoin} (
             id,
@@ -302,12 +307,12 @@ function InventoryPageContent() {
         query = query.eq('lots.categories.id', categoryFilter);
       }
 
-      // Apply sale type filter
+      // Apply sale type filter (now on inventory_items.sale_type)
       if (saleTypeFilter !== 'all') {
         if (saleTypeFilter === 'normal') {
-          query = query.is('lots.sale_type', null);
+          query = query.is('sale_type', null);
         } else {
-          query = query.eq('lots.sale_type', saleTypeFilter);
+          query = query.eq('sale_type', saleTypeFilter);
         }
       }
 
@@ -330,7 +335,7 @@ function InventoryPageContent() {
           orderColumn = 'created_at'; // fallback for pagination consistency
           break;
         case 'price':
-          orderColumn = 'lots.selling_price_default';
+          orderColumn = 'selling_price';
           break;
         case 'date':
           orderColumn = 'created_at';
@@ -353,8 +358,14 @@ function InventoryPageContent() {
 
       if (error) throw error;
 
+      // Guard: exclude items missing lot, category, or size data
+      let finalData = (data || []).filter(item =>
+        item.lots &&
+        item.lots.categories?.name &&
+        (item.lots.sizes?.size_name || item.lots.free_text_size)
+      );
+
       // Client-side sort for QR code column
-      let finalData = data || [];
       if (skipServerSort && sortBy === 'qr_code') {
         finalData = [...finalData].sort((a, b) => {
           const codeA = a.qr_codes?.code?.toUpperCase() || '';
@@ -485,14 +496,14 @@ function InventoryPageContent() {
       inventoryItemId: item.id,
       category: item.lots.categories?.name || 'Unknown',
       size: item.lots.sizes?.size_name || item.lots.free_text_size || 'N/A',
-      originalPrice: item.lots.selling_price_default ?? 0,
-      finalPrice: item.lots.selling_price_default ?? 0,
-      taxRate: item.lots.tax_rate ?? 0,
+      originalPrice: item.selling_price ?? 0,
+      finalPrice: item.selling_price ?? 0,
+      taxRate: item.tax_rate ?? 0,
       lotId: item.lots.id,
-      lotSaleType: item.lots.sale_type,
+      lotSaleType: item.sale_type ?? item.lots.sale_type,
       lotMinMargin: item.lots.min_margin_percent,
-      lotSaleReason: item.lots.sale_reason,
-      lotCostPrice: item.lots.cost_price_per_unit ?? undefined,
+      lotSaleReason: item.sale_reason ?? item.lots.sale_reason,
+      lotCostPrice: item.cost_price ?? undefined,
     };
 
     // Store item in sessionStorage for POS page to pick up
@@ -671,7 +682,7 @@ function InventoryPageContent() {
 
       {/* Inventory List with Integrated Filters */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 px-4 sm:px-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -741,10 +752,10 @@ function InventoryPageContent() {
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-3 sm:px-6">
 
           {/* Table */}
-          <div className="overflow-x-auto -mx-6 px-6 relative">
+          <div className="overflow-x-auto -mx-3 px-3 sm:-mx-6 relative">
             {/* Subtle loading overlay — keeps table visible */}
             {tableLoading && (
               <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center rounded-md">
@@ -797,7 +808,7 @@ function InventoryPageContent() {
                 <tbody>
                   {inventory.map((item, idx) => {
                     // Determine sale type styling from config tokens
-                    const saleType = item.lots?.sale_type;
+                    const saleType = item.sale_type ?? item.lots?.sale_type;
                     const bgClass = saleType && s.rowTint[saleType as keyof typeof s.rowTint]
                       ? s.rowTint[saleType as keyof typeof s.rowTint]
                       : '';
@@ -840,7 +851,7 @@ function InventoryPageContent() {
                           </Badge>
                         </td>
                         <td className="py-3 px-3 text-xs font-semibold whitespace-nowrap">
-                          {formatCurrency(item.lots?.selling_price_default || 0)}
+                          {formatCurrency(item.selling_price || 0)}
                         </td>
                         <td className="py-3 px-3 text-xs text-muted-foreground whitespace-nowrap">
                           {formatDate(item.sold_at || item.created_at)}

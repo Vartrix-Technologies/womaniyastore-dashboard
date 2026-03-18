@@ -200,7 +200,7 @@ All protected routes enforce authentication via `app/(protected)/layout.tsx`:
      - Must have enough unused QR codes available
 
 4. **Submit**:
-   - If **online**: Calls `add_stock_lot` Edge Function → creates `lot` record → creates `inventory_items` records (one per quantity) → assigns QR codes → updates `qr_codes.status = 'assigned'`
+   - If **online**: Calls `add_stock_lot` Edge Function → creates `lot` record → creates `inventory_items` records (one per quantity, each with its own `selling_price`, `cost_price`, `tax_rate` copied from lot) → assigns QR codes → updates `qr_codes.status = 'assigned'`
    - If **offline**: Shows error "This action requires internet connection"
    - On success: Shows success toast, redirects to "All Items" tab showing newly added items
 

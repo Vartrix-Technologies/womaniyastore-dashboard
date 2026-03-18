@@ -35,8 +35,11 @@ export function InventoryItemDetailsDialog({ item, onClose, onAddToCart }: Inven
     returned: 'outline' as const,
   }[item.status] || 'outline' as const;
 
-  const profitMargin = item.lots && item.lots.selling_price_default != null && item.lots.cost_price_per_unit
-    ? (((item.lots.selling_price_default - item.lots.cost_price_per_unit) / item.lots.cost_price_per_unit) * 100).toFixed(1)
+  const itemSellingPrice = item.selling_price ?? item.lots?.selling_price_default ?? 0;
+  const itemCostPrice = item.cost_price ?? item.lots?.cost_price_per_unit ?? 0;
+  const itemTaxRate = item.tax_rate ?? item.lots?.tax_rate ?? 0;
+  const profitMargin = itemCostPrice > 0
+    ? (((itemSellingPrice - itemCostPrice) / itemCostPrice) * 100).toFixed(1)
     : '0';
 
   const daysInInventory = Math.floor(
@@ -64,18 +67,18 @@ export function InventoryItemDetailsDialog({ item, onClose, onAddToCart }: Inven
               <Badge variant={statusVariant} className="capitalize text-xs">
                 {item.status}
               </Badge>
-              {item.lots?.sale_type && (
+              {(item.sale_type ?? item.lots?.sale_type) && (
                 <Badge
                   variant="outline"
                   className={`text-xs font-semibold ${
-                    item.lots.sale_type === 'festival'
+                    (item.sale_type ?? item.lots?.sale_type) === 'festival'
                       ? 'bg-green-100 text-green-700 border-green-400'
-                      : item.lots.sale_type === 'clearance'
+                      : (item.sale_type ?? item.lots?.sale_type) === 'clearance'
                         ? 'bg-red-100 text-red-700 border-red-400'
                         : 'bg-blue-100 text-blue-700 border-blue-400'
                   }`}
                 >
-                  {item.lots.sale_type === 'festival' ? '🟢 Festival' : item.lots.sale_type === 'clearance' ? '🔴 Clearance' : '🔵 Promotion'}
+                  {(item.sale_type ?? item.lots?.sale_type) === 'festival' ? '🟢 Festival' : (item.sale_type ?? item.lots?.sale_type) === 'clearance' ? '🔴 Clearance' : '🔵 Promotion'}
                 </Badge>
               )}
             </div>
@@ -135,15 +138,15 @@ export function InventoryItemDetailsDialog({ item, onClose, onAddToCart }: Inven
                   </div>
                 )}
                 {/* Sale details */}
-                {item.lots.sale_reason && (
+                {(item.sale_reason ?? item.lots?.sale_reason) && (
                   <div className="flex flex-col gap-1 pt-1.5 border-t border-dashed">
                     <span className="text-xs text-muted-foreground">Sale Reason</span>
                     <p className="text-xs italic bg-muted/50 px-2.5 py-1.5 rounded-md border">
-                      &quot;{item.lots.sale_reason}&quot;
+                      &quot;{item.sale_reason ?? item.lots?.sale_reason}&quot;
                     </p>
                   </div>
                 )}
-                {item.lots.min_margin_percent !== null && item.lots.sale_type === 'festival' && (
+                {item.lots?.min_margin_percent !== null && item.lots?.min_margin_percent !== undefined && (item.sale_type ?? item.lots?.sale_type) === 'festival' && (
                   <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-dashed">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
@@ -173,18 +176,18 @@ export function InventoryItemDetailsDialog({ item, onClose, onAddToCart }: Inven
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Cost Price</span>
                   <span className={`font-semibold ${s.statsActive.available.text}`}>
-                    {formatCurrency(item.lots.cost_price_per_unit ?? 0)}
+                    {formatCurrency(itemCostPrice)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Selling Price</span>
                   <span className="font-bold text-base">
-                    {formatCurrency(item.lots.selling_price_default ?? 0)}
+                    {formatCurrency(itemSellingPrice)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Tax Rate</span>
-                  <span className="tabular-nums">{item.lots.tax_rate ?? 0}%</span>
+                  <span className="tabular-nums">{itemTaxRate}%</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">

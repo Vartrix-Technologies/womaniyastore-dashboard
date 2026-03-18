@@ -77,9 +77,9 @@ export function VendorPerformance({ shopId, startDate, endDate }: VendorPerforma
             final_price,
             inventory_items!sale_items_inventory_item_id_fkey (
               id,
+              cost_price,
               lots (
-                vendor_name,
-                cost_price_per_unit
+                vendor_name
               )
             )
           )
@@ -104,7 +104,7 @@ export function VendorPerformance({ shopId, startDate, endDate }: VendorPerforma
         sale.sale_items?.forEach((item: any) => {
           const lot = item.inventory_items?.lots;
           const vendorName = lot?.vendor_name || 'Unknown Vendor';
-          const costPrice = lot?.cost_price_per_unit || 0;
+          const costPrice = item.inventory_items?.cost_price || 0;
           const finalPrice = item.final_price || 0;
 
           if (!vendorMap[vendorName]) {

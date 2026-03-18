@@ -124,7 +124,7 @@ export function DateRangeFilter({
   // ---- shared classes ----
 
   const btnBase =
-    'inline-flex h-[calc(100%-1px)] items-center justify-center whitespace-nowrap rounded-md border border-transparent px-2 text-sm font-medium transition-[color,box-shadow] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+    'inline-flex h-[calc(100%-1px)] items-center justify-center whitespace-nowrap rounded-md border border-transparent px-2 py-1.5 sm:py-0 text-sm font-medium transition-[color,box-shadow] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
   const btnActive = 'bg-background text-foreground shadow-sm';
   const btnInactive = 'text-muted-foreground hover:text-foreground/80';
 
@@ -133,7 +133,7 @@ export function DateRangeFilter({
   return (
     <div
       className={cn(
-        'inline-grid w-full grid-cols-3 sm:grid-cols-5 gap-0.5 rounded-lg bg-muted text-muted-foreground p-[3px] sm:h-8',
+        'inline-grid w-full grid-cols-4 sm:grid-cols-5 gap-0.5 rounded-lg bg-muted text-muted-foreground p-[3px]',
         className,
       )}
     >
@@ -160,7 +160,7 @@ export function DateRangeFilter({
             onClick={handleCustomClick}
             className={cn(
               btnBase,
-              'gap-1 col-span-2 sm:col-span-1',
+              'gap-1 col-span-4 sm:col-span-1 w-full',
               isCustomActive ? btnActive : btnInactive,
             )}
           >

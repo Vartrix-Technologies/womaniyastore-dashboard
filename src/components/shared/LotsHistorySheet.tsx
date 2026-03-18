@@ -21,7 +21,8 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { EditLotDialog } from '@/components/shared/EditLotDialog';
 import { EditInventoryItemDialog } from '@/components/shared/EditInventoryItemDialog';
-import type { Category, Size } from '@/types';
+import { InventoryItemDetailsDialog } from '@/components/shared/InventoryItemDetailsDialog';
+import type { InventoryItemForList, Category, Size } from '@/types';
 
 const s = appConfig.styles;
 
@@ -32,6 +33,11 @@ interface LotItem {
   status: string;
   sold_at: string | null;
   created_at: string;
+  selling_price?: number;
+  cost_price?: number;
+  tax_rate?: number;
+  sale_type?: string | null;
+  sale_reason?: string | null;
   qr_codes: { code: string; id: string } | null;
 }
 
@@ -87,6 +93,9 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
   const [editingLot, setEditingLot] = useState<LotEntry | null>(null);
   const [editingItem, setEditingItem] = useState<LotItem | null>(null);
   const [editingItemLot, setEditingItemLot] = useState<LotEntry | null>(null);
+
+  // View item details state
+  const [viewingItem, setViewingItem] = useState<InventoryItemForList | null>(null);
 
   const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: 'month' });
 
@@ -150,7 +159,7 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
       // Re-fetch with lot_id to map items
       const { data: itemsWithLot } = await supabase
         .from('inventory_items')
-        .select(`id, lot_id, status, sold_at, created_at, qr_codes ( code, id )`)
+        .select(`id, lot_id, status, sold_at, created_at, selling_price, cost_price, tax_rate, sale_type, sale_reason, qr_codes ( code, id )`)
         .in('lot_id', lotIds);
 
       const itemsByLot = new Map<string, LotItem[]>();
@@ -161,6 +170,11 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
           status: item.status,
           sold_at: item.sold_at,
           created_at: item.created_at,
+          selling_price: item.selling_price,
+          cost_price: item.cost_price,
+          tax_rate: item.tax_rate,
+          sale_type: item.sale_type,
+          sale_reason: item.sale_reason,
           qr_codes: item.qr_codes,
         });
         itemsByLot.set(item.lot_id, arr);
@@ -493,19 +507,21 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
                                     </Badge>
                                   </button>
 
-                                  {/* Edit lot button — always visible */}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 shrink-0 mr-2 hover:text-brand-600"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingLot(lot);
-                                    }}
-                                    title="Edit entire lot"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
+                                  {/* Edit lot button — only when there are available items */}
+                                  {lot.availableCount > 0 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0 mr-2 hover:text-brand-600"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingLot(lot);
+                                      }}
+                                      title="Edit entire lot"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
                                 </div>
 
                                 {/* ── Level 3: Items under this lot ── */}
@@ -525,9 +541,43 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
                                           style={{ animationDelay: `${itemIdx * 15}ms` }}
                                         >
                                           <div className="flex-1 min-w-0 flex items-center gap-2">
-                                            <span className="font-mono text-xs font-semibold tracking-wide truncate">
-                                              {item.qr_codes?.code || '—'}
-                                            </span>
+                                            <button
+                                              onClick={() => {
+                                                setViewingItem({
+                                                  id: item.id,
+                                                  status: item.status as InventoryItemForList['status'],
+                                                  sold_at: item.sold_at,
+                                                  created_at: item.created_at,
+                                                  shop_id: shopId || '',
+                                                  selling_price: item.selling_price ?? lot.selling_price_default,
+                                                  cost_price: item.cost_price ?? lot.cost_price_per_unit,
+                                                  tax_rate: item.tax_rate ?? lot.tax_rate,
+                                                  sale_type: item.sale_type ?? lot.sale_type,
+                                                  sale_reason: item.sale_reason ?? lot.sale_reason,
+                                                  qr_codes: item.qr_codes,
+                                                  lots: {
+                                                    id: lot.id,
+                                                    selling_price_default: lot.selling_price_default,
+                                                    cost_price_per_unit: lot.cost_price_per_unit,
+                                                    tax_rate: lot.tax_rate,
+                                                    date_of_stock_arrival: lot.date_of_stock_arrival,
+                                                    vendor_name: lot.vendor_name,
+                                                    sale_type: lot.sale_type,
+                                                    min_margin_percent: lot.min_margin_percent,
+                                                    sale_reason: lot.sale_reason,
+                                                    categories: lot.category_id ? { id: lot.category_id, name: lot.category_name } : null,
+                                                    sizes: lot.size_id ? { size_name: lot.size_name } : null,
+                                                    free_text_size: lot.free_text_size,
+                                                  },
+                                                });
+                                              }}
+                                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                                              title="View details"
+                                            >
+                                              <Badge variant="outline" className={`font-mono text-xs ${s.accent.hoverBg} ${s.accent.hoverBorder}`}>
+                                                {item.qr_codes?.code || '—'}
+                                              </Badge>
+                                            </button>
                                             {statusBadge(item.status)}
                                           </div>
                                           <div className="flex items-center gap-1 shrink-0">
@@ -618,6 +668,12 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
         lot={editingItemLot}
         onClose={() => { setEditingItem(null); setEditingItemLot(null); }}
         onSaved={handleItemUpdated}
+      />
+
+      {/* ── View Item Details Dialog ── */}
+      <InventoryItemDetailsDialog
+        item={viewingItem}
+        onClose={() => setViewingItem(null)}
       />
     </>
   );

@@ -93,6 +93,33 @@ export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: Edit
   const sellNum = Number(sellingPrice) || 0;
   const profitMargin = costNum > 0 ? (((sellNum - costNum) / costNum) * 100).toFixed(1) : '0';
   const hasSoldItems = lot.soldCount > 0;
+  const hasAvailableItems = lot.availableCount > 0;
+
+  // Don't allow editing if all items are sold — nothing actionable
+  if (!hasAvailableItems && hasSoldItems) {
+    return (
+      <Dialog open={!!lot} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-sm p-5">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <div className={`p-1.5 rounded-md ${s.headerIconGradient} text-white shadow-sm`}>
+                <Pencil className="h-4 w-4" />
+              </div>
+              Cannot Edit Lot
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">All {lot.soldCount} items in this lot are sold.</p>
+              <p>Sold lot records cannot be edited. Existing sale records remain unchanged.</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onClose} className="w-full mt-2">Close</Button>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleSave = async () => {
     // Validation
@@ -127,8 +154,26 @@ export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: Edit
       if (lotError) throw lotError;
       if (count === 0) throw new Error('Update affected 0 rows — you may not have permission to edit this lot. Please run the lots RLS migration.');
 
+      // 2. Propagate price + sale type changes to all available inventory items in this lot
+      const { error: itemsError } = await supabase
+        .from('inventory_items')
+        .update({
+          selling_price: Number(sellingPrice),
+          cost_price: Number(costPrice),
+          tax_rate: Number(taxRate) || 0,
+          sale_type: saleType || null,
+          sale_reason: saleReason || null,
+        })
+        .eq('lot_id', lot.id)
+        .eq('status', 'available');
+
+      if (itemsError) {
+        console.error('Error updating item prices:', itemsError);
+        toast.warning('Lot updated but item prices/sale type may not have synced');
+      }
+
       toast.success(
-        `Lot updated — ${lot.items.length} items affected`,
+        `Lot updated — ${lot.availableCount} available item${lot.availableCount === 1 ? '' : 's'} affected`,
         { description: `${lot.category_name} → ${categories.find(c => c.id === categoryId)?.name || 'Updated'}` }
       );
       onSaved();
