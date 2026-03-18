@@ -1,7 +1,7 @@
 # Womaniya Dashboard — Comprehensive Test Document
 
-> **Version**: 1.0  
-> **Last Updated**: 2026-03-09  
+> **Version**: 1.1  
+> **Last Updated**: 2026-03-18  
 > **App**: Womaniya Dashboard (Retail POS + Inventory + Staff Management PWA)  
 > **Target Devices**: Android tablets (primary), mobile phones, desktop browsers  
 > **Browsers**: Chrome (primary), Edge, Safari (iOS PWA)
@@ -255,6 +255,8 @@
 | 4.2.10 | Manual QR entry — Enter key | Type code, press Enter | Triggers lookup (same as clicking Add/Search button) | 🟡 |
 | 4.2.11 | Cancel scanner | Click "Cancel" in scanner dialog | Dialog closes; camera stops; returns to POS page | 🟡 |
 | 4.2.12 | Double-scan prevention | Scan two QR codes very rapidly | Only one item added (processing guard prevents double-fire) | 🟠 |
+| 4.2.13 | Camera switch (front/back) | Click the camera switch button in scanner | Camera toggles between front and back; icon updates | 🟡 |
+| 4.2.14 | Camera preference persisted | Switch to front camera, close scanner, reopen | Front camera is selected (saved in localStorage `pos-camera-facing`) | 🟢 |
 
 ### 4.3 Product Search Dialog
 
@@ -304,6 +306,8 @@
 | 4.5.11 | Post-sale: Cart cleared | After successful sale, close bill preview | Cart is empty; item count shows 0 | 🔴 |
 | 4.5.12 | Cancel/close buttons disabled during processing | While "Processing…" is showing | Cancel and close (X) buttons are disabled; user cannot dismiss during sale | 🟠 |
 | 4.5.13 | Complete sale — offline | Turn off network, then complete sale | Sale saved to IndexedDB as pending; success toast mentioning offline queue | 🔴 |
+| 4.5.14 | Complete sale — manual items only | Add only Quick Add items (no QR), checkout | Sale completes; `sale_items` records have `inventory_item_id=NULL`, `category_name` and `size_name` populated | 🔴 |
+| 4.5.15 | Complete sale — mixed QR + manual | Add QR-scanned items and Quick Add items, checkout | Sale completes; QR items have `inventory_item_id` set, manual items have NULL `inventory_item_id` with `category_name`/`size_name` | 🔴 |
 
 ### 4.6 Bill Preview Dialog
 
@@ -311,12 +315,40 @@
 |---|-----------|-------|-----------------|----------|
 | 4.6.1 | Bill shows shop details | Inspect bill header | Shop name, address, phone displayed | 🟡 |
 | 4.6.2 | Bill number displayed | Check bill number on receipt | Format: `{prefix}-{number}` (e.g., "WOM-123") | 🟡 |
-| 4.6.3 | Item details in bill | Check items section | Each item with QR code, category, size, original price, final price, discount | 🟡 |
+| 4.6.3 | Item details in bill (QR items) | Check items section for QR-scanned items | Each item with QR code, category, size, original price, final price, discount | 🟡 |
+| 4.6.3a | Item details in bill (manual items) | Check items section for Quick Add items | Item shows category, size, price; no QR code shown; no redundant discount reason line | 🟡 |
 | 4.6.4 | Print action | Click Print button | Browser print dialog opens with receipt formatted for printing | 🟠 |
 | 4.6.5 | Download as PDF | Click Download button | PDF file downloads containing the bill receipt | 🟠 |
 | 4.6.6 | Share action | Click Share button (if Web Share API supported) | Native share dialog opens | 🟡 |
 | 4.6.7 | WhatsApp share | Click WhatsApp button | Opens WhatsApp with pre-formatted bill text | 🟡 |
 | 4.6.8 | Sale type badges | Bill for items with sale types | Festival (green), Clearance (red), Promotion (blue) badges visible per item | 🟢 |
+
+### 4.7 Quick Add Item Dialog
+
+| # | Test Case | Steps | Expected Result | Severity |
+|---|-----------|-------|-----------------|----------|
+| 4.7.1 | Quick Add button visible | Open POS page | "Quick Add" button (Zap icon) visible alongside Scan QR and Search Products | 🔴 |
+| 4.7.2 | Open Quick Add dialog | Click "Quick Add" button | Dialog opens with: Category (autocomplete), Size (autocomplete), Price, Tax %, Note fields | 🔴 |
+| 4.7.3 | Category — autocomplete search | Click Category field, type partial name | Dropdown filters to matching categories; search is case-insensitive | 🟠 |
+| 4.7.4 | Category — select existing | Click a category from the dropdown list | Category selected; dropdown closes; button shows selected category name | 🟠 |
+| 4.7.5 | Category — inline create | Type a new category name not yet in the list, click "Create \"...\"" | New category created in DB; selected automatically; success toast | 🟠 |
+| 4.7.6 | Category — duplicate create prevention | Type an existing category name, click Create | Existing category selected instead of creating a duplicate | 🟡 |
+| 4.7.7 | Size — autocomplete search | Click Size field, type partial name | Dropdown filters to matching sizes | 🟡 |
+| 4.7.8 | Size — select existing | Click a size from the dropdown | Size selected; dropdown closes | 🟡 |
+| 4.7.9 | Size — inline create | Type a new size name, click "Create \"...\"" | New size created in DB; selected automatically; success toast | 🟡 |
+| 4.7.10 | Size — optional | Leave size empty, fill required fields, add | Item added successfully with size "N/A" | 🟡 |
+| 4.7.11 | Price — required validation | Leave price empty, click Add | Toast error: "Please enter a valid price" | 🟠 |
+| 4.7.12 | Category — required validation | Leave category empty, click Add | Toast error: "Please select or create a category" | 🟠 |
+| 4.7.13 | Tax rate — defaults | Open dialog, check Tax % field | Pre-filled with default tax rate from app config | 🟡 |
+| 4.7.14 | Note — optional | Enter a note, add item | Note stored on cart item as `manualNote` | 🟢 |
+| 4.7.15 | Successful add to cart | Fill category + price, click Add to Cart | Item added to cart; dialog closes and resets all fields; success feedback | 🔴 |
+| 4.7.16 | Cart item shows manual badge | Check cart after adding a Quick Add item | Item shows category, size, price; identifiable as manual/Quick Add entry | 🟡 |
+| 4.7.17 | Dialog resets on close | Open dialog, fill some fields, close (X or cancel), reopen | All fields reset to defaults (empty category, empty size, empty price, default tax) | 🟡 |
+| 4.7.18 | Dropdown scroll inside dialog | Open Category dropdown with many categories | Dropdown list is scrollable; can scroll through all categories without issue | 🟠 |
+| 4.7.19 | Manage link — Category (admin only) | Login as admin/owner, open Quick Add | "Manage" link visible next to Category label; clicking navigates to `/settings?tab=categories` | 🟡 |
+| 4.7.20 | Manage link — Size (admin only) | Login as admin/owner, open Quick Add | "Manage" link visible next to Size label; clicking navigates to `/settings?tab=sizes` | 🟡 |
+| 4.7.21 | Manage links — hidden for staff | Login as staff, open Quick Add | No "Manage" links visible next to Category or Size labels | 🟡 |
+| 4.7.22 | Loading state on dialog open | Open dialog for first time | "Loading..." shown while categories and sizes fetch; then dropdowns become interactive | 🟡 |
 
 ---
 
@@ -435,12 +467,18 @@
 |---|-----------|-------|-----------------|----------|
 | 6.2.1 | QR Prefix — searchable combobox | Click QR Prefix field | Dropdown opens with search; shows existing prefixes; each shows available QR count | 🟠 |
 | 6.2.2 | QR Prefix — available count | Select a prefix | Available QR code count shown for that prefix | 🟠 |
-| 6.2.3 | Category — dropdown | Click Category field | Dropdown shows shop's categories | 🟠 |
-| 6.2.4 | Size — dropdown + free text | Click Size field | Dropdown of predefined sizes + option to enter free text size | 🟡 |
+| 6.2.3 | Category — autocomplete combobox | Click Category field | Searchable combobox opens with existing categories; type to filter; can select or create inline | 🟠 |
+| 6.2.3a | Category — inline create | Type a new category name, click "Create \"...\"" | Category created in DB; auto-selected; success toast; appears in dropdown for future use | 🟠 |
+| 6.2.3b | Category — Manage link | Check next to Category label (admin/owner) | "Manage" link with Settings icon visible; clicking navigates to `/settings?tab=categories` | 🟡 |
+| 6.2.4 | Size — autocomplete combobox | Click Size field | Searchable combobox opens with existing sizes; type to filter; can select or create inline | 🟡 |
+| 6.2.4a | Size — inline create | Type a new size name, click "Create \"...\"" | Size created in DB; auto-selected; success toast | 🟡 |
+| 6.2.4b | Size — Manage link | Check next to Size label (admin/owner) | "Manage" link with Settings icon visible; clicking navigates to `/settings?tab=sizes` | 🟡 |
 | 6.2.5 | Vendor Name — autocomplete | Start typing vendor name | Suggestions from existing vendor names appear | 🟡 |
 | 6.2.6 | Quantity — exceeds available QR | Enter quantity > available QR codes for selected prefix | Error: not enough QR codes available | 🟠 |
 | 6.2.7 | Live profit margin | Enter cost=100, selling=150 | Profit margin shows 50% (calculated live) | 🟡 |
 | 6.2.8 | Profit margin updates | Change selling to 200 | Profit margin updates to 100% | 🟡 |
+| 6.2.9 | Category dropdown scroll | Have many categories, open Category combobox | Dropdown list is scrollable; all categories accessible | 🟡 |
+| 6.2.10 | Duplicate inline create prevention | Type an existing category name, click Create | Existing category selected instead of creating duplicate | 🟡 |
 
 ### 6.3 Validation (Zod Schema)
 
@@ -523,7 +561,8 @@
 |---|-----------|-------|-----------------|----------|
 | 7.6.1 | Tab switch | Click "Analytics" tab | Analytics view loads with sub-components | 🟡 |
 | 7.6.2 | Sale type analysis | Check sale type section | Breakdown by type: Regular, Festival, Clearance, Promotion with counts + revenue | 🟡 |
-| 7.6.3 | Category performance | Check category section | Revenue and count per product category | 🟡 |
+| 7.6.3 | Category performance | Check category section | Revenue and count per product category; Quick Sale items grouped by their stored `category_name` (not "Uncategorized") | 🟡 |
+| 7.6.3a | Category performance \u2014 manual items | Complete a Quick Sale with category "Silk", check analytics | "Silk" category shows updated revenue/count including the manual item | 🟡 |
 | 7.6.4 | Staff performance | Check staff section | Per-staff sales metrics | 🟡 |
 | 7.6.5 | Deep-link to Festival report | Click festival detail link | Navigates to `/admin/reports/festival` | 🟡 |
 | 7.6.6 | Deep-link to Clearance report | Click clearance detail link | Navigates to `/admin/reports/clearance` | 🟡 |
@@ -1172,6 +1211,7 @@
 | 21.2.3 | Complete sale offline | Turn off network, add items, checkout | Sale saved to IndexedDB as pending; success toast mentioning offline | 🔴 |
 | 21.2.4 | Offline sale syncs on reconnect | Complete offline sale, turn network on | SyncContext detects online; picks up pending sale; syncs successfully; sale appears in Sales Hub | 🔴 |
 | 21.2.5 | Cart persists during offline | Add items offline, navigate away, come back | Cart restored from sessionStorage/localStorage | 🟡 |
+| 21.2.6 | Quick Add works offline — cached categories | Turn off network, open Quick Add | Previously loaded categories/sizes available from fetch cache; can add manual items to cart | 🟠 |
 
 ### 21.3 Sync Behavior
 
@@ -1221,6 +1261,7 @@
 | 22.2.6 | Edit dialog close resets | Open edit dialog, change values, close without saving, reopen | Shows original values (not previously-unsaved changes) | 🟡 |
 | 22.2.7 | Attendance create resets | Successfully create attendance, reopen dialog | Fields reset to defaults (today's date, 09:00 clock-in, empty reason) | 🟡 |
 | 22.2.8 | Checklist create resets | Successfully create checklist, reopen dialog | Title empty, items list empty | 🟡 |
+| 22.2.9 | Quick Add dialog resets | Add a manual item via Quick Add, reopen dialog | Category empty, size empty, price empty, tax at default, note empty | 🟡 |
 
 ### 22.3 Dialog/Popup Behavior
 
@@ -1233,6 +1274,7 @@
 | 22.3.5 | X close button | Open any dialog | X button visible in top-right; clicking closes dialog | 🟡 |
 | 22.3.6 | Dialog animation | Open and close a dialog | Open: fade + zoom-in animation; Close: fade + zoom-out animation | 🟢 |
 | 22.3.7 | Sheet slide animation | Open a Lot History or Category Breakdown Sheet | Sheet slides in from right; closes sliding back out | 🟢 |
+| 22.3.8 | Popover scroll inside Dialog | Open Quick Add dialog, open Category dropdown with many items | Dropdown list scrolls normally inside the dialog (Popover renders without portal to avoid Dialog inert blocking) | 🟠 |
 
 ### 22.4 Dialog Scrolling on Mobile/Tablet with Keyboard
 
@@ -1439,10 +1481,10 @@
 | 1. Authentication | 4 | 22 | 10 | 6 | 5 | 1 |
 | 2. Navigation | 4 | 18 | 0 | 5 | 9 | 4 |
 | 3. Admin Dashboard | 4 | 14 | 2 | 5 | 0 | 7 |
-| 4. POS | 6 | 38 | 8 | 15 | 12 | 3 |
+| 4. POS | 7 | 63 | 12 | 21 | 23 | 7 |
 | 5. Inventory | 7 | 39 | 1 | 11 | 24 | 3 |
-| 6. Add Stock Lot | 4 | 17 | 3 | 8 | 5 | 1 |
-| 7. Sales Hub | 7 | 24 | 1 | 4 | 17 | 2 |
+| 6. Add Stock Lot | 4 | 23 | 3 | 10 | 9 | 1 |
+| 7. Sales Hub | 7 | 25 | 1 | 4 | 18 | 2 |
 | 8. Returns | 3 | 21 | 3 | 7 | 10 | 1 |
 | 9. QR Codes | 5 | 22 | 1 | 6 | 14 | 1 |
 | 10. Finances | 5 | 19 | 1 | 5 | 12 | 1 |
@@ -1456,8 +1498,8 @@
 | 18. Superadmin | 4 | 12 | 2 | 5 | 4 | 1 |
 | 19. Sync Issues | 2 | 8 | 1 | 1 | 5 | 1 |
 | 20. Guide & FAQs | 2 | 8 | 0 | 0 | 7 | 1 |
-| 21. Offline/PWA | 4 | 16 | 3 | 3 | 9 | 1 |
-| 22. Cross-Cutting UI/UX | 9 | 47 | 0 | 11 | 27 | 9 |
+| 21. Offline/PWA | 4 | 17 | 3 | 4 | 9 | 1 |
+| 22. Cross-Cutting UI/UX | 9 | 49 | 0 | 12 | 28 | 9 |
 | 23. Security | 3 | 12 | 8 | 4 | 0 | 0 |
 | 24. Performance & Edge | 6 | 22 | 1 | 10 | 9 | 2 |
-| **TOTAL** | — | **485** | **54** | **147** | **237** | **47** |
+| **TOTAL** | — | **520** | **57** | **153** | **244** | **56** |

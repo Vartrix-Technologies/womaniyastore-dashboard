@@ -132,8 +132,11 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         item.sale_type === 'promotion' ? 'background: #eff6ff; border-color: #bfdbfe; color: #1e40af;' :
         'background: #f9fafb;';
       
-      const itemName = `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-      const qrCode = item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A';
+      const isManual = !item.inventory_item_id;
+      const itemName = isManual
+        ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+        : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
+      const qrCode = isManual ? 'Quick Sale' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
       
       const priceHTML = item.original_price !== item.final_price ? `
         <p style="font-size: 0.875rem; color: #6b7280; text-decoration: line-through; margin: 0;">
@@ -164,7 +167,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         </div>
       ` : '';
 
-      const discountReason = item.discount_reason ? `
+      const discountReason = (item.discount_reason && !isManual) ? `
         <p style="font-size: 0.75rem; color: #ea580c; margin-left: 20px; margin-top: 4px;">
           Reason: ${item.discount_reason}
         </p>
@@ -371,8 +374,11 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
       const fontSize = layoutType === 'thermal-80mm' ? '12px' : '10px';
       
       const thermalItemsHTML = saleItems.map((item: any, index: number) => {
-        const itemName = `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-        const qrCode = item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A';
+        const isManual = !item.inventory_item_id;
+        const itemName = isManual
+          ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+          : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
+        const qrCode = isManual ? 'Quick Sale' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
         const saleIcon = item.sale_type === 'festival' ? '🟢' : item.sale_type === 'clearance' ? '🔴' : item.sale_type === 'promotion' ? '🔵' : '';
         
         return `
@@ -545,8 +551,11 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
           item.sale_type === 'promotion' ? 'background: #eff6ff; border-color: #bfdbfe; color: #1e40af;' :
           'background: #f9fafb;';
         
-        const itemName = `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-        const qrCode = item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A';
+        const isManual = !item.inventory_item_id;
+        const itemName = isManual
+          ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+          : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
+        const qrCode = isManual ? 'Quick Sale' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
         
         const priceHTML = item.original_price !== item.final_price ? `
           <p style="font-size: 0.875rem; color: #6b7280; text-decoration: line-through; margin: 0;">
@@ -577,7 +586,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
           </div>
         ` : '';
 
-        const discountReason = item.discount_reason ? `
+        const discountReason = (item.discount_reason && !isManual) ? `
           <p style="font-size: 0.75rem; color: #ea580c; margin-left: 20px; margin-top: 4px;">
             Reason: ${item.discount_reason}
           </p>
@@ -845,7 +854,10 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
       
       // Build item list for message
       const itemsList = saleItems.map((item: any, index: number) => {
-        const itemName = `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
+        const isManual = !item.inventory_item_id;
+        const itemName = isManual
+          ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+          : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
         const price = formatCurrency(item.final_price);
         return `${index + 1}. ${itemName} - ${price}`;
       }).join('\n');
@@ -1038,7 +1050,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                   <img 
                     src={appConfig.billing.logoPath}
                     alt={appConfig.billing.logoAlt}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain rounded-lg"
                     onError={(e) => {
                       // Fallback to text if image not found
                       e.currentTarget.style.display = 'none';
@@ -1111,11 +1123,17 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                           <div className="flex items-center gap-2">
                             <span className="font-semibold">{index + 1}.</span>
                             <span className="font-medium">
-                                {item.inventory_items?.lots?.categories?.name || 'Item'} - {item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}
+                                {item.inventory_item_id
+                                  ? `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`
+                                  : `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+                                }
                               </span>
                             </div>
                             <p className="text-xs text-muted-foreground font-mono ml-5">
-                              QR: {item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A'}
+                              {item.inventory_item_id
+                                ? `QR: ${item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A'}`
+                                : <span className="text-amber-600 font-sans font-medium">Quick Sale</span>
+                              }
                           </p>
                           {hasSaleType && (
                             <div className="ml-5 mt-1 flex items-center gap-1">
@@ -1131,7 +1149,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                               </span>
                             </div>
                           )}
-                          {item.discount_reason && (
+                          {(item.discount_reason && item.inventory_item_id) && (
                             <p className="text-xs text-orange-600 ml-5 mt-1">
                               Reason: {item.discount_reason}
                             </p>

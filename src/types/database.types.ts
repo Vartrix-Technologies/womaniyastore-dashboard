@@ -797,39 +797,45 @@ export type Database = {
           discount_reason: string | null
           final_price: number
           id: string
-          inventory_item_id: string
+          inventory_item_id: string | null
           original_price: number
           sale_id: string
           sale_type: string | null
           shop_id: string
           sold_on_sale: boolean
           tax_amount: number
+          category_name: string | null
+          size_name: string | null
         }
         Insert: {
           created_at?: string
           discount_reason?: string | null
           final_price: number
           id?: string
-          inventory_item_id: string
+          inventory_item_id?: string | null
           original_price: number
           sale_id: string
           sale_type?: string | null
           shop_id: string
           sold_on_sale?: boolean
           tax_amount?: number
+          category_name?: string | null
+          size_name?: string | null
         }
         Update: {
           created_at?: string
           discount_reason?: string | null
           final_price?: number
           id?: string
-          inventory_item_id?: string
+          inventory_item_id?: string | null
           original_price?: number
           sale_id?: string
           sale_type?: string | null
           shop_id?: string
           sold_on_sale?: boolean
           tax_amount?: number
+          category_name?: string | null
+          size_name?: string | null
         }
         Relationships: [
           {

@@ -8,8 +8,13 @@ export interface PendingSale {
     originalPrice: number;
     finalPrice: number;
     discountReason?: string;
-    soldOnSale?: boolean; // NEW: was this a sale item
-    saleType?: string; // NEW: 'festival' | 'clearance' | 'promotion'
+    soldOnSale?: boolean; // was this a sale item
+    saleType?: string; // 'festival' | 'clearance' | 'promotion'
+    isManualEntry?: boolean; // Quick Sale item
+    categoryName?: string; // for manual items
+    sizeName?: string; // for manual items
+    taxRate?: number; // for manual items
+    manualNote?: string; // for manual items
   }>;
   paymentMethod: string;
   customerName?: string;
@@ -32,14 +37,17 @@ export interface CartItem {
   taxRate: number;
   discountReason?: string;
   lotId: string;
-  // NEW: Sale information from lot
+  // Sale information from lot
   lotSaleType?: string | null; // 'festival' | 'promotion' from lot
   lotMinMargin?: number | null; // min margin % from lot
   lotSaleReason?: string | null; // sale description from lot
   lotCostPrice?: number; // cost price for margin validation
-  // NEW: Sale selection at checkout (ground truth)
+  // Sale selection at checkout (ground truth)
   soldOnSale?: boolean; // final decision: is this a sale item
   saleType?: string; // final sale type: 'festival' | 'clearance' | 'promotion'
+  // Manual entry (Quick Sale) — item not in inventory
+  isManualEntry?: boolean;
+  manualNote?: string; // optional note for manual items
 }
 
 export interface ScanResult {

@@ -10,6 +10,12 @@ export interface CompleteSaleRequest {
     discount_reason?: string;
     sold_on_sale?: boolean;
     sale_type?: string;
+    // Manual entry (Quick Sale) fields
+    is_manual?: boolean;
+    category_name?: string;
+    size_name?: string;
+    tax_rate?: number;
+    manual_note?: string;
   }>;
   payment_method: string;
   customer_name?: string;

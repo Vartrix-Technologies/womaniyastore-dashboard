@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { QrCode, X, Keyboard } from 'lucide-react';
+import { QrCode, X, Keyboard, SwitchCamera } from 'lucide-react';
 import { searchInventoryByQRCode } from '@/lib/api/inventory';
 import { getCachedItem, cacheScannedItem } from '@/lib/offline';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
@@ -21,6 +21,8 @@ import { appConfig } from '@/lib/config/app.config';
 const s = appConfig.styles;
 const a = s.accent;
 import { scanBeep, errorBuzz, initAudio } from '@/lib/sounds';
+
+const CAMERA_FACING_KEY = 'pos-camera-facing';
 
 interface ScanQRButtonProps {
   onItemScanned: (item: CartItem) => void;
@@ -33,6 +35,13 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const processingRef = useRef(false); // ref-based guard: prevents double-fire from fast callbacks
   const { isOnline } = useOfflineStatus();
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(CAMERA_FACING_KEY);
+      return saved === 'user' ? 'user' : 'environment';
+    }
+    return 'environment';
+  });
 
   useEffect(() => {
     return () => {
@@ -45,48 +54,16 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
 
   const startScanning = async () => {
     initAudio(); // Must happen in click handler so Chrome allows audio
-    
-    // Pre-check camera permissions before opening the scanner dialog
-    try {
-      // First check if the browser supports getUserMedia
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('Camera not supported in this browser. Try installing the app first.');
-        return;
-      }
-
-      // Request camera permission explicitly — this triggers the browser prompt
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      // Release the stream immediately — html5-qrcode will request its own
-      stream.getTracks().forEach(track => track.stop());
-    } catch (permError: unknown) {
-      const errName = permError instanceof DOMException ? permError.name : '';
-      if (errName === 'NotAllowedError') {
-        toast.error('Camera permission denied. Please allow camera access in your browser/device settings and try again.', {
-          duration: 6000,
-        });
-      } else if (errName === 'NotFoundError') {
-        toast.error('No camera found on this device.');
-      } else if (errName === 'NotReadableError') {
-        toast.error('Camera is in use by another app. Close other camera apps and try again.');
-      } else {
-        toast.error('Could not access camera. Make sure the app has camera permissions.');
-      }
-      console.error('[Camera] Permission check failed:', permError);
-      return;
-    }
-
     setScanning(true);
 
-    // Wait for DOM to be ready
+    // Wait for dialog DOM to render the #qr-reader element
     setTimeout(async () => {
       try {
         const scanner = new Html5Qrcode('qr-reader');
         scannerRef.current = scanner;
 
         await scanner.start(
-          { facingMode: 'environment' },
+          { facingMode },
           {
             fps: 10,
             qrbox: { width: 250, height: 250 },
@@ -95,11 +72,22 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
           () => {} // onScanFailure - ignore scan errors
         );
       } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         console.error('Failed to start scanner:', error);
-        toast.error('Failed to start camera scanner. Try closing other apps using the camera.');
+        if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+          toast.error('Camera permission denied. Allow camera access in browser settings.', { duration: 6000 });
+        } else if (msg.includes('NotFoundError')) {
+          toast.error('No camera found on this device.');
+        } else if (msg.includes('NotReadableError') || msg.includes('in use')) {
+          toast.error('Camera is in use by another app. Close other camera apps and try again.');
+        } else if (msg.includes('AbortError') || msg.includes('Timeout')) {
+          toast.error('Camera took too long to start. Please try again.');
+        } else {
+          toast.error('Failed to start camera. Try closing other apps using the camera.');
+        }
         setScanning(false);
       }
-    }, 100);
+    }, 300);
   };
 
   const stopScanning = async () => {
@@ -122,6 +110,40 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
     // NOTE: processingRef is NOT reset here — only onScanSuccess's finally block
     // resets it. This prevents a second html5-qrcode callback from slipping through
     // while scanner.stop() is completing.
+  };
+
+  const switchCamera = async () => {
+    const newMode = facingMode === 'environment' ? 'user' : 'environment';
+
+    // Stop current scanner
+    if (scannerRef.current) {
+      try {
+        const state = scannerRef.current.getState();
+        if (state === 2) await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch {}
+      scannerRef.current = null;
+    }
+
+    setFacingMode(newMode);
+    localStorage.setItem(CAMERA_FACING_KEY, newMode);
+
+    // Restart with new camera after hardware release
+    setTimeout(async () => {
+      try {
+        const scanner = new Html5Qrcode('qr-reader');
+        scannerRef.current = scanner;
+        await scanner.start(
+          { facingMode: newMode },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          () => {}
+        );
+      } catch (error) {
+        console.error('Failed to switch camera:', error);
+        toast.error('Failed to switch camera. This device may only have one camera.');
+      }
+    }, 300);
   };
 
   const onScanSuccess = async (decodedText: string) => {
@@ -256,13 +278,10 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
       <Button
         onClick={startScanning}
         variant="outline"
-        className={`w-full h-auto py-4 flex-col gap-2 ${a.hoverBg} ${a.hoverBorder}`}
+        className={`w-full h-auto py-3 gap-2 ${a.hoverBg} ${a.hoverBorder}`}
       >
-        <QrCode className={`h-6 w-6 ${s.linkColor}`} />
-        <div className="text-center">
-          <div className="font-semibold text-base">Scan QR Code</div>
-          <div className="text-xs text-muted-foreground">Use camera</div>
-        </div>
+        <QrCode className={`h-5 w-5 ${s.linkColor}`} />
+        <span className="font-semibold text-base">Scan QR Code</span>
       </Button>
 
       {/* QR Scanner Dialog */}
@@ -288,6 +307,13 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
           <div className="px-6 py-5 space-y-4">
             <div className="relative rounded-xl overflow-hidden border-2 border-border/40 shadow-inner bg-black/5">
               <div id="qr-reader" className="w-full"></div>
+              <button
+                onClick={switchCamera}
+                className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors z-10"
+                title={facingMode === 'environment' ? 'Switch to front camera' : 'Switch to back camera'}
+              >
+                <SwitchCamera className="h-5 w-5" />
+              </button>
               {loading && (
                 <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
                   <div className="flex flex-col items-center gap-3">

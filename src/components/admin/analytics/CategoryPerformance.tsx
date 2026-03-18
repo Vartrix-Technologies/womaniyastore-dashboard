@@ -61,6 +61,8 @@ export function CategoryPerformance({ shopId, startDate, endDate }: CategoryPerf
           sale_items (
             id,
             final_price,
+            inventory_item_id,
+            category_name,
             inventory_items!sale_items_inventory_item_id_fkey (
               id,
               lots (
@@ -92,8 +94,9 @@ export function CategoryPerformance({ shopId, startDate, endDate }: CategoryPerf
       salesData?.forEach((sale: any) => {
         sale.sale_items?.forEach((item: any) => {
           const category = item.inventory_items?.lots?.categories;
-          const categoryName = category?.name || 'Uncategorized';
-          const categoryId = category?.id || 'unknown';
+          // For Quick Sale (manual) items, use the stored category_name
+          const categoryName = category?.name || item.category_name || 'Uncategorized';
+          const categoryId = category?.id || (item.category_name ? `manual-${item.category_name}` : 'unknown');
           const finalPrice = item.final_price || 0;
 
           if (!categoryMap[categoryId]) {

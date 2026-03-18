@@ -8,11 +8,12 @@ import { CartList } from '@/components/pos/CartList';
 import { CartSummary } from '@/components/pos/CartSummary';
 import { CheckoutDialog } from '@/components/pos/CheckoutDialog';
 import { ProductSearchDialog } from '@/components/pos/ProductSearchDialog';
+import { QuickAddItemDialog } from '@/components/pos/QuickAddItemDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { BillPreviewDialog } from '@/components/shared/BillPreviewDialog';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { QrCode, Trash2, Search, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { QrCode, Trash2, Search, ShoppingBag, ArrowLeft, Zap } from 'lucide-react';
 import type { CartItem } from '@/types/pos.types';
 import type { Sale } from '@/types';
 import { toast } from 'sonner';
@@ -67,6 +68,7 @@ export default function POSPage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchManualEntry, setSearchManualEntry] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [clearCartDialogOpen, setClearCartDialogOpen] = useState(false);
   const [billPreviewSale, setBillPreviewSale] = useState<Sale | null>(null);
   const cartRef = useRef<CartItem[]>([]);
@@ -146,6 +148,10 @@ export default function POSPage() {
     [addToCart],
   );
   const handleAddFromSearch = useCallback(
+    (item: CartItem) => addToCart(item, 'search'),
+    [addToCart],
+  );
+  const handleAddFromQuickAdd = useCallback(
     (item: CartItem) => addToCart(item, 'search'),
     [addToCart],
   );
@@ -263,22 +269,9 @@ export default function POSPage() {
           <Card>
             <CardContent className="p-4 space-y-3">
               {/* Action Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Search Button */}
-                <Button
-                  onClick={() => { initAudio(); setSearchOpen(true); }}
-                  variant="outline"
-                  className={`h-auto py-4 flex-col gap-2 ${a.hoverBg} ${a.hoverBorder}`}
-                >
-                  <Search className={`h-6 w-6 ${s.linkColor}`} />
-                  <div className="text-center">
-                    <div className="font-semibold text-base">Search Products</div>
-                    <div className="text-xs text-muted-foreground">Browse inventory</div>
-                  </div>
-                </Button>
-
-                {/* Scan QR */}
-                <div className="flex-1">
+              <div className="space-y-3">
+                {/* Scan QR - Full width on mobile, first row */}
+                <div>
                   <ScanQRButton
                     onItemScanned={handleQRScanned}
                     onManualEntry={() => {
@@ -286,6 +279,35 @@ export default function POSPage() {
                       setSearchOpen(true);
                     }}
                   />
+                </div>
+
+                {/* Search + Quick Add - Side by side, full row on all screens */}
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                  {/* Search Button */}
+                  <Button
+                    onClick={() => { initAudio(); setSearchOpen(true); }}
+                    variant="outline"
+                    className={`h-auto py-4 flex-col gap-2 ${a.hoverBg} ${a.hoverBorder}`}
+                  >
+                    <Search className={`h-6 w-6 ${s.linkColor}`} />
+                    <div className="text-center">
+                      <div className="font-semibold text-base">Search Products</div>
+                      <div className="text-xs text-muted-foreground">Browse inventory</div>
+                    </div>
+                  </Button>
+
+                  {/* Quick Add (Manual Entry) */}
+                  <Button
+                    onClick={() => { initAudio(); setQuickAddOpen(true); }}
+                    variant="outline"
+                    className="h-auto py-4 flex-col gap-2 border-dashed border-amber-300 hover:bg-amber-50 hover:border-amber-400"
+                  >
+                    <Zap className="h-6 w-6 text-amber-600" />
+                    <div className="text-center">
+                      <div className="font-semibold text-base">Quick Add</div>
+                      <div className="text-xs text-muted-foreground">No QR code needed</div>
+                    </div>
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -353,6 +375,13 @@ export default function POSPage() {
           </Card>
         </div>
       </div>
+
+      {/* Quick Add Dialog */}
+      <QuickAddItemDialog
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        onAddToCart={handleAddFromQuickAdd}
+      />
 
       {/* Product Search Dialog */}
       <ProductSearchDialog

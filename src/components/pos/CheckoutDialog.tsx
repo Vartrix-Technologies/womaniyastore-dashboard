@@ -62,7 +62,9 @@ export function CheckoutDialog({
     if (items.length === 0) return;
 
     // ── Guardrail: reject duplicate QR codes (case-insensitive) ────
-    const qrCodesUpper = items.map((i) => i.qrCode.toUpperCase());
+    // Skip manual entries for duplicate check (they have generated unique IDs)
+    const trackedItems = items.filter(i => !i.isManualEntry);
+    const qrCodesUpper = trackedItems.map((i) => i.qrCode.toUpperCase());
     const uniqueQrCodes = new Set(qrCodesUpper);
     if (uniqueQrCodes.size !== qrCodesUpper.length) {
       const duplicates = qrCodesUpper.filter((qr, idx) => qrCodesUpper.indexOf(qr) !== idx);
@@ -99,13 +101,19 @@ export function CheckoutDialog({
       const saleData = {
         client_sale_id: `sale-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         items: items.map((item) => ({
-          qr_code: item.qrCode,
+          qr_code: item.isManualEntry ? '' : item.qrCode,
           original_price: item.originalPrice,
           final_price: item.finalPrice,
           discount_reason: item.discountReason,
           // Sale information from cart
           sold_on_sale: item.soldOnSale || false,
           sale_type: item.saleType,
+          // Manual entry fields
+          is_manual: item.isManualEntry || false,
+          category_name: item.isManualEntry ? item.category : undefined,
+          size_name: item.isManualEntry ? item.size : undefined,
+          tax_rate: item.isManualEntry ? item.taxRate : undefined,
+          manual_note: item.isManualEntry ? item.manualNote : undefined,
         })),
         payment_method: paymentMethod,
         customer_name: customerName || undefined,
@@ -150,8 +158,13 @@ export function CheckoutDialog({
               originalPrice: item.original_price,
               finalPrice: item.final_price,
               discountReason: item.discount_reason,
-              soldOnSale: item.sold_on_sale, // NEW
-              saleType: item.sale_type, // NEW
+              soldOnSale: item.sold_on_sale,
+              saleType: item.sale_type,
+              isManualEntry: item.is_manual || false,
+              categoryName: item.category_name,
+              sizeName: item.size_name,
+              taxRate: item.tax_rate,
+              manualNote: item.manual_note,
             })),
             paymentMethod: saleData.payment_method,
             customerName: saleData.customer_name,
@@ -173,8 +186,13 @@ export function CheckoutDialog({
             originalPrice: item.original_price,
             finalPrice: item.final_price,
             discountReason: item.discount_reason,
-            soldOnSale: item.sold_on_sale, // NEW
-            saleType: item.sale_type, // NEW
+            soldOnSale: item.sold_on_sale,
+            saleType: item.sale_type,
+            isManualEntry: item.is_manual || false,
+            categoryName: item.category_name,
+            sizeName: item.size_name,
+            taxRate: item.tax_rate,
+            manualNote: item.manual_note,
           })),
           paymentMethod: saleData.payment_method,
           customerName: saleData.customer_name,
@@ -267,7 +285,13 @@ export function CheckoutDialog({
                           </Badge>
                         )}
                       </div>
-                      <div className="text-[10px] text-muted-foreground/70 font-mono">{item.qrCode}</div>
+                      <div className="text-[10px] text-muted-foreground/70 font-mono">
+                        {item.isManualEntry ? (
+                          <span className="text-amber-600 font-sans font-medium">Quick Sale{item.manualNote ? ` · ${item.manualNote}` : ''}</span>
+                        ) : (
+                          item.qrCode
+                        )}
+                      </div>
                     </div>
                     <div className="text-right shrink-0">
                       <div className="font-semibold text-foreground">{formatCurrency(item.finalPrice)}</div>

@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft, Plus, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft, Plus, AlertCircle, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import { appConfig } from '@/lib/config/app.config';
 import { formatCurrency } from '@/lib/formatters';
@@ -48,6 +48,13 @@ export default function AddStockLotPage() {
   const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false);
   // QR prefix autocomplete
   const [prefixPopoverOpen, setPrefixPopoverOpen] = useState(false);
+  // Category & Size autocomplete + inline create
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
+  const [sizeSearch, setSizeSearch] = useState('');
+  const [creatingSize, setCreatingSize] = useState(false);
 
   const {
     register,
@@ -195,6 +202,62 @@ export default function AddStockLotPage() {
     updateAvailableQrCount(prefixId);
   };
 
+  const handleCreateCategory = async () => {
+    const name = categorySearch.trim();
+    if (!name || !profile?.shop_id) return;
+    const existing = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setValue('category_id', existing.id);
+      setCategoryPopoverOpen(false);
+      return;
+    }
+    setCreatingCategory(true);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({ name, shop_id: profile.shop_id })
+        .select('*')
+        .single();
+      if (error) throw error;
+      setCategories(prev => [...prev, data]);
+      setValue('category_id', data.id);
+      setCategoryPopoverOpen(false);
+      toast.success(`Category "${data.name}" created`);
+    } catch (error: any) {
+      toast.error(error.message?.includes('duplicate') ? 'Category already exists' : 'Failed to create category');
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
+  const handleCreateSize = async () => {
+    const name = sizeSearch.trim();
+    if (!name || !profile?.shop_id) return;
+    const existing = sizes.find(sz => sz.size_name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setValue('size_id', existing.id);
+      setSizePopoverOpen(false);
+      return;
+    }
+    setCreatingSize(true);
+    try {
+      const { data, error } = await supabase
+        .from('sizes')
+        .insert({ size_name: name, shop_id: profile.shop_id })
+        .select('*')
+        .single();
+      if (error) throw error;
+      setSizes(prev => [...prev, data]);
+      setValue('size_id', data.id);
+      setSizePopoverOpen(false);
+      toast.success(`Size "${data.size_name}" created`);
+    } catch (error: any) {
+      toast.error(error.message?.includes('duplicate') ? 'Size already exists' : 'Failed to create size');
+    } finally {
+      setCreatingSize(false);
+    }
+  };
+
   const onSubmit = async (data: AddStockLotFormValues) => {
     const quantityNum = data.quantity;
     if (quantityNum > availableQrCount) {
@@ -278,34 +341,79 @@ export default function AddStockLotPage() {
         </CardHeader> */}
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Category */}
+            {/* Category - autocomplete with inline create */}
             <div className="space-y-2">
-              <Label htmlFor="category" className="text-sm">Category *</Label>
-              <div className="flex items-center gap-2">
-                <Controller
-                  name="category_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="category" className={`text-sm ${errors.category_id ? 'border-red-500' : ''}`}>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id} className="text-sm">
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <Link href="/settings?tab=categories" title="Manage categories">
-                  <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="category" className="text-sm">Category *</Label>
+                <Link href="/settings?tab=categories" className="text-xs text-muted-foreground hover:text-foreground hover:underline flex items-center gap-1">
+                  <Settings2 className="h-3 w-3" /> Manage
                 </Link>
               </div>
+              <Controller
+                name="category_id"
+                control={control}
+                render={({ field }) => (
+                  <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={categoryPopoverOpen}
+                        className={`w-full justify-between font-normal text-sm ${errors.category_id ? 'border-red-500' : ''}`}
+                      >
+                        {field.value ? (
+                          <span>{categories.find(c => c.id === field.value)?.name || 'Select category'}</span>
+                        ) : (
+                          <span className="text-muted-foreground">Select category</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search or type new..."
+                          value={categorySearch}
+                          onValueChange={setCategorySearch}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {categorySearch.trim() ? (
+                              <button
+                                type="button"
+                                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
+                                onClick={handleCreateCategory}
+                                disabled={creatingCategory}
+                              >
+                                {creatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                                Create &quot;{categorySearch.trim()}&quot;
+                              </button>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">Type to search or create</span>
+                            )}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {categories.map((cat) => (
+                              <CommandItem
+                                key={cat.id}
+                                value={cat.name}
+                                onSelect={() => {
+                                  field.onChange(cat.id);
+                                  setCategoryPopoverOpen(false);
+                                }}
+                              >
+                                <Check className={`mr-2 h-4 w-4 ${field.value === cat.id ? 'opacity-100' : 'opacity-0'}`} />
+                                {cat.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
               {errors.category_id && <p className="text-xs text-red-500">{errors.category_id.message}</p>}
             </div>
 
@@ -404,32 +512,77 @@ export default function AddStockLotPage() {
             {/* Size and Custom Size in one row on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="size" className="text-sm">Size *</Label>
-                <div className="flex items-center gap-2">
-                  <Controller
-                    name="size_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger id="size" className={`text-sm ${errors.size_id ? 'border-red-500' : ''}`}>
-                          <SelectValue placeholder="Select size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sizes.map((size) => (
-                            <SelectItem key={size.id} value={size.id} className="text-sm">
-                              {size.size_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <Link href="/settings?tab=sizes" title="Manage sizes">
-                    <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9">
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="size" className="text-sm">Size *</Label>
+                  <Link href="/settings?tab=sizes" className="text-xs text-muted-foreground hover:text-foreground hover:underline flex items-center gap-1">
+                    <Settings2 className="h-3 w-3" /> Manage
                   </Link>
                 </div>
+                <Controller
+                  name="size_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Popover open={sizePopoverOpen} onOpenChange={setSizePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={sizePopoverOpen}
+                          className={`w-full justify-between font-normal text-sm ${errors.size_id ? 'border-red-500' : ''}`}
+                        >
+                          {field.value ? (
+                            <span>{sizes.find(sz => sz.id === field.value)?.size_name || 'Select size'}</span>
+                          ) : (
+                            <span className="text-muted-foreground">Select size</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search or type new..."
+                            value={sizeSearch}
+                            onValueChange={setSizeSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              {sizeSearch.trim() ? (
+                                <button
+                                  type="button"
+                                  className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
+                                  onClick={handleCreateSize}
+                                  disabled={creatingSize}
+                                >
+                                  {creatingSize ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                                  Create &quot;{sizeSearch.trim()}&quot;
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">Type to search or create</span>
+                              )}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {sizes.map((size) => (
+                                <CommandItem
+                                  key={size.id}
+                                  value={size.size_name}
+                                  onSelect={() => {
+                                    field.onChange(size.id);
+                                    setSizePopoverOpen(false);
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${field.value === size.id ? 'opacity-100' : 'opacity-0'}`} />
+                                  {size.size_name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
                 {errors.size_id && <p className="text-xs text-red-500">{errors.size_id.message}</p>}
               </div>
 

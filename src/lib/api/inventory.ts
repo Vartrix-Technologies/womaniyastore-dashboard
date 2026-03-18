@@ -207,7 +207,7 @@ export async function fetchSizes() {
   const { data, error } = await supabase
     .from('sizes')
     .select('*')
-    .order('name');
+    .order('size_name');
 
   if (error) {
     console.error('Fetch sizes error:', error);

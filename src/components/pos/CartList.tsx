@@ -123,9 +123,22 @@ export function CartList({
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <div className="font-semibold text-sm text-foreground min-w-[120px]">{item.category}
-                        <div className="text-[10px] text-muted-foreground/70 font-mono tracking-tight bg-muted/40 px-2 py-0.5 my-1 rounded border border-border/30">
-                          {item.qrCode}
-                        </div>
+                        {item.isManualEntry ? (
+                          <div className="flex items-center gap-1 my-1">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-300 bg-amber-50 text-amber-700 font-medium">
+                              Quick Sale
+                            </Badge>
+                            {item.manualNote && (
+                              <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px]" title={item.manualNote}>
+                                {item.manualNote}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-muted-foreground/70 font-mono tracking-tight bg-muted/40 px-2 py-0.5 my-1 rounded border border-border/30">
+                            {item.qrCode}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>

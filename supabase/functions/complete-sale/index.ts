@@ -10,8 +10,14 @@ interface SaleItem {
   original_price: number
   final_price: number
   discount_reason?: string
-  sold_on_sale?: boolean // NEW: was this a sale item
-  sale_type?: string // NEW: 'festival' | 'clearance' | 'promotion'
+  sold_on_sale?: boolean
+  sale_type?: string // 'festival' | 'clearance' | 'promotion'
+  // Manual entry (Quick Sale) fields
+  is_manual?: boolean
+  category_name?: string
+  size_name?: string
+  tax_rate?: number
+  manual_note?: string
 }
 
 interface CompleteSaleRequest {
@@ -168,6 +174,8 @@ Deno.serve(async (req: Request) => {
 
     // Validate discounts against user's max_discount_percent
     for (const item of items) {
+      // Skip discount validation for manual items with zero original price edge case
+      if (item.original_price <= 0) continue
       const discountAmount = item.original_price - item.final_price
       const discountPercent = (discountAmount / item.original_price) * 100
 
@@ -183,11 +191,15 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Separate manual (Quick Sale) items from tracked (QR-based) items
+    const manualItems = items.filter(i => i.is_manual)
+    const trackedItems = items.filter(i => !i.is_manual)
+
     // Begin transaction-like operations
-    // 1. Fetch and validate all QR codes and inventory items
+    // 1. Fetch and validate all QR codes and inventory items (tracked items only)
     const inventoryData: any[] = []
 
-    for (const item of items) {
+    for (const item of trackedItems) {
       // Fetch QR code (case-insensitive)
       const { data: qrCode, error: qrError } = await supabase
         .from('qr_codes')
@@ -274,7 +286,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // 2. Calculate totals
+    // 2. Calculate totals (tracked + manual items)
     let subtotal_amount = 0
     let total_amount = 0
     let total_tax = 0
@@ -285,6 +297,14 @@ Deno.serve(async (req: Request) => {
 
       // Calculate tax on final price
       const itemTax = (data.sale_item.final_price * data.tax_rate) / 100
+      total_tax += itemTax
+    }
+
+    // Add manual items to totals
+    for (const item of manualItems) {
+      subtotal_amount += item.original_price
+      total_amount += item.final_price
+      const itemTax = (item.final_price * (item.tax_rate || 0)) / 100
       total_tax += itemTax
     }
 
@@ -414,6 +434,48 @@ Deno.serve(async (req: Request) => {
         inventory_item_id: data.inventory_item.id,
         original_price: data.sale_item.original_price,
         final_price: data.sale_item.final_price,
+      })
+    }
+
+    // 5b. Insert manual (Quick Sale) items — no inventory/QR linkage
+    for (const item of manualItems) {
+      const itemTax = (item.final_price * (item.tax_rate || 0)) / 100
+      const discountNote = item.discount_reason || null
+
+      const { data: saleItem, error: saleItemError } = await supabase
+        .from('sale_items')
+        .insert({
+          shop_id: profile.shop_id,
+          sale_id: sale.id,
+          inventory_item_id: null,
+          original_price: item.original_price,
+          final_price: item.final_price,
+          tax_amount: itemTax,
+          discount_reason: discountNote,
+          sold_on_sale: item.sold_on_sale || false,
+          sale_type: item.sale_type || null,
+          category_name: item.category_name || null,
+          size_name: item.size_name || null,
+        })
+        .select()
+        .single()
+
+      if (saleItemError) {
+        console.error('Error creating manual sale item:', saleItemError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to create manual sale item', code: 'SALE_ITEM_ERROR', details: saleItemError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      saleItems.push({
+        qr_code: null,
+        inventory_item_id: null,
+        original_price: item.original_price,
+        final_price: item.final_price,
+        is_manual: true,
+        category_name: item.category_name,
+        size_name: item.size_name,
       })
     }
 
