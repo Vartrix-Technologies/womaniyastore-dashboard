@@ -246,13 +246,7 @@ function FinancesPageContent() {
       }
 
       // Parallelize all data fetches for faster load
-      const [
-        { data: salesData, error: salesError },
-        { data: transactionsData, error: transError, count },
-        { data: inventoryData, error: invError },
-        { data: statsTransData, error: statsTransError },
-        { data: returnsData, error: returnsError }
-      ] = await Promise.all([
+      const [salesResult, transResult, inventoryResult, statsTransResult, returnsResult] = await Promise.all([
         salesQuery,
         transQuery,
         supabase
@@ -267,17 +261,31 @@ function FinancesPageContent() {
         returnsQuery
       ]);
 
-      if (salesError) throw salesError;
-      if (transError) throw transError;
-      if (invError) throw invError;
-      if (statsTransError) throw statsTransError;
-      if (returnsError) throw returnsError;
+      // Log individual query errors but don't throw — show partial data
+      const queryErrors: string[] = [];
+      if (salesResult.error) queryErrors.push(`Sales: ${salesResult.error.message}`);
+      if (transResult.error) queryErrors.push(`Expenses: ${transResult.error.message}`);
+      if (inventoryResult.error) queryErrors.push(`Inventory: ${inventoryResult.error.message}`);
+      if (statsTransResult.error) queryErrors.push(`Expense stats: ${statsTransResult.error.message}`);
+      if (returnsResult.error) queryErrors.push(`Returns: ${returnsResult.error.message}`);
 
-      // Calculate summary from FULL filtered dataset
-      const totalRevenue = (salesData as any[])?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
-      const totalRefunds = (returnsData as any[])?.reduce((sum, r) => sum + (r.refund_amount || 0), 0) || 0;
-      const totalExpenses = (statsTransData as any[])?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-      const inventoryValue = (inventoryData as any[])?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
+      if (queryErrors.length > 0) {
+        console.error('Financial query errors:', queryErrors);
+        toast.error(`Failed to load: ${queryErrors.join('; ')}`);
+      }
+
+      const salesData = salesResult.data;
+      const transactionsData = transResult.data;
+      const count = transResult.count;
+      const inventoryData = inventoryResult.data;
+      const statsTransData = statsTransResult.data;
+      const returnsData = returnsResult.data;
+
+      // Calculate summary from FULL filtered dataset (using available data)
+      const totalRevenue = (salesData as any[] | null)?.reduce((sum: number, sale: any) => sum + (sale.total_amount || 0), 0) || 0;
+      const totalRefunds = (returnsData as any[] | null)?.reduce((sum: number, r: any) => sum + (r.refund_amount || 0), 0) || 0;
+      const totalExpenses = (statsTransData as any[] | null)?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0;
+      const inventoryValue = (inventoryData as any[] | null)?.reduce((sum: number, item: any) => sum + (item.cost_price || 0), 0) || 0;
       const netRevenue = totalRevenue - totalRefunds;
 
       const newSummary = {
@@ -311,9 +319,9 @@ function FinancesPageContent() {
         .map((item: any, idx: number) => ({ ...item, color: colors[idx % colors.length] }));
 
       setCategoryBreakdown(breakdownArray);
-    } catch (error) {
-      // Network error / offline — keep showing previous financial data
-      console.warn('Financial data fetch failed — keeping previous values:', error);
+    } catch (error: any) {
+      console.error('Financial data fetch failed:', error);
+      toast.error(error?.message || 'Failed to load financial data');
     } finally {
       setLoading(false);
     }
@@ -613,7 +621,7 @@ function FinancesPageContent() {
             icon: TrendingDown,
             iconColor: 'text-red-600',
             valueColor: 'text-red-600',
-            subtitle: `${transactions.length} expenses`,
+            subtitle: `${totalCount} expenses`,
           },
           {
             label: 'Net Profit',

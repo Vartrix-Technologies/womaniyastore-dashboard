@@ -65,6 +65,49 @@ export async function addStockLot(
 }
 
 /**
+ * Fetch a single inventory item by ID in the InventoryItemForList shape
+ */
+export async function fetchInventoryItemById(itemId: string) {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select(`
+      id,
+      shop_id,
+      status,
+      sold_at,
+      created_at,
+      selling_price,
+      cost_price,
+      tax_rate,
+      sale_type,
+      sale_reason,
+      qr_codes (code, id),
+      lots (
+        id,
+        selling_price_default,
+        cost_price_per_unit,
+        tax_rate,
+        date_of_stock_arrival,
+        vendor_name,
+        sale_type,
+        min_margin_percent,
+        sale_reason,
+        categories (id, name),
+        sizes (size_name),
+        free_text_size
+      )
+    `)
+    .eq('id', itemId)
+    .single();
+
+  if (error || !data) {
+    throw new Error('Failed to fetch inventory item');
+  }
+
+  return data;
+}
+
+/**
  * Fetch available inventory items
  */
 export async function fetchAvailableInventory(filters?: {

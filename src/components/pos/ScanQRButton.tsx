@@ -278,7 +278,7 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
       <Button
         onClick={startScanning}
         variant="outline"
-        className={`w-full h-auto py-3 gap-2 ${a.hoverBg} ${a.hoverBorder}`}
+        className={`w-full h-auto py-3 gap-2 border-brand-500 ${a.hoverBg} ${a.hoverBorder}`}
       >
         <QrCode className={`h-5 w-5 ${s.linkColor}`} />
         <span className="font-semibold text-base">Scan QR Code</span>

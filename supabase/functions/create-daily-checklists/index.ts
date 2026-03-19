@@ -1,6 +1,6 @@
 // Supabase Edge Function: Auto-create Daily Checklist Instances
 // Deploy: supabase functions deploy create-daily-checklists
-// Schedule: Run daily at 6:00 AM via Supabase Cron
+// Schedule: Run daily at 4:00 AM IST (10:30 PM UTC) via pg_cron + pg_net
 
 // NOTE: This file is for Deno runtime, not Node.js
 // TypeScript errors shown in VS Code are expected and can be ignored
@@ -26,16 +26,20 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
-    const dayOfWeek = new Date().getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // Get today's date in IST (not UTC — avoids wrong date between midnight and 5:30 AM IST)
+    // IST is UTC+5:30, so we add the offset manually for reliable Deno compatibility
+    const now = new Date();
+    const istMs = now.getTime() + (5.5 * 60 * 60 * 1000);
+    const istDate = new Date(istMs);
+    const today = istDate.toISOString().split('T')[0]; // YYYY-MM-DD in IST
+    const dayOfWeek = istDate.getUTCDay(); // 0=Sun..6=Sat (using UTC methods on the offset date)
 
     console.log(`Creating checklist instances for ${today} (day ${dayOfWeek})`);
 
     // Get all shops
     const { data: shops, error: shopsError } = await supabase
       .from('shops')
-      .select('id, name');
+      .select('id, shop_name');
 
     if (shopsError) throw shopsError;
 
@@ -44,7 +48,7 @@ Deno.serve(async (req: Request) => {
 
     // For each shop, create today's checklist instances
     for (const shop of shops) {
-      console.log(`Processing shop: ${shop.name} (${shop.id})`);
+      console.log(`Processing shop: ${shop.shop_name} (${shop.id})`);
 
       // Call the database function to create instances
       const { data: instances, error: instancesError } = await supabase
@@ -57,7 +61,7 @@ Deno.serve(async (req: Request) => {
         console.error(`Error for shop ${shop.id}:`, instancesError);
         results.push({
           shop_id: shop.id,
-          shop_name: shop.name,
+          shop_name: shop.shop_name,
           success: false,
           error: instancesError.message,
         });
@@ -69,13 +73,13 @@ Deno.serve(async (req: Request) => {
 
       results.push({
         shop_id: shop.id,
-        shop_name: shop.name,
+        shop_name: shop.shop_name,
         success: true,
         instances_created: createdCount,
         instances: instances || [],
       });
 
-      console.log(`Created ${createdCount} instances for ${shop.name}`);
+      console.log(`Created ${createdCount} instances for ${shop.shop_name}`);
     }
 
     return new Response(

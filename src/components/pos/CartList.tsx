@@ -7,10 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import type { CartItem } from '@/types/pos.types';
+import type { InventoryItemForList } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { InventoryItemDetailsDialog } from '@/components/shared/InventoryItemDetailsDialog';
+import { EditInventoryItemDialog } from '@/components/shared/EditInventoryItemDialog';
+import { fetchInventoryItemById } from '@/lib/api/inventory';
 
 interface CartListProps {
   items: CartItem[];
@@ -18,6 +22,7 @@ interface CartListProps {
   onUpdatePrice: (qrCode: string, newPrice: number) => void;
   onUpdateDiscountReason: (qrCode: string, reason: string) => void;
   onUpdateSaleType: (qrCode: string, soldOnSale: boolean, saleType?: string) => void;
+  onRefreshItem?: (qrCode: string, updates: Partial<CartItem>) => void;
   onClearCart?: () => void;
 }
 
@@ -27,11 +32,70 @@ export function CartList({
   onUpdatePrice,
   onUpdateDiscountReason,
   onUpdateSaleType,
+  onRefreshItem,
   onClearCart,
 }: CartListProps) {
   const { profile } = useAuth();
+  const isStaff = profile?.role === 'staff';
   const [editingPrice, setEditingPrice] = useState<Record<string, number>>({});
   const [priceWarning, setPriceWarning] = useState<{ item: CartItem; newPrice: number; percent: number } | null>(null);
+  const [viewingItem, setViewingItem] = useState<InventoryItemForList | null>(null);
+  const [editingItem, setEditingItem] = useState<InventoryItemForList | null>(null);
+  const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
+
+  // Track which cart item QR was clicked so we can update cart after edit
+  const [activeCartQr, setActiveCartQr] = useState<string | null>(null);
+
+  const handleQrClick = async (cartItem: CartItem) => {
+    if (isStaff || cartItem.isManualEntry || !cartItem.inventoryItemId) return;
+    try {
+      setLoadingItemId(cartItem.inventoryItemId);
+      const data = await fetchInventoryItemById(cartItem.inventoryItemId);
+      setActiveCartQr(cartItem.qrCode);
+      setViewingItem(data as unknown as InventoryItemForList);
+    } catch {
+      toast.error('Failed to load item details');
+    } finally {
+      setLoadingItemId(null);
+    }
+  };
+
+  const handleEditFromDetails = (item: InventoryItemForList) => {
+    setViewingItem(null);
+    setEditingItem(item);
+  };
+
+  const handleEditSaved = async () => {
+    if (!editingItem?.id || !activeCartQr) {
+      setEditingItem(null);
+      return;
+    }
+    try {
+      // Re-fetch updated item to get new prices
+      const updated = await fetchInventoryItemById(editingItem.id);
+      const newSellingPrice = updated.selling_price ?? updated.lots?.selling_price_default ?? 0;
+      const cartItem = items.find(i => i.qrCode === activeCartQr);
+      if (cartItem && onRefreshItem) {
+        const updates: Partial<CartItem> = {};
+        if (newSellingPrice !== cartItem.originalPrice) {
+          updates.originalPrice = newSellingPrice;
+          updates.finalPrice = newSellingPrice;
+        }
+        const newTaxRate = updated.tax_rate ?? updated.lots?.tax_rate ?? 0;
+        if (newTaxRate !== cartItem.taxRate) {
+          updates.taxRate = newTaxRate;
+        }
+        if (Object.keys(updates).length > 0) {
+          onRefreshItem(activeCartQr, updates);
+          toast.info('Cart item updated');
+        }
+      }
+    } catch {
+      // Non-critical — item was saved, just couldn't refresh
+    }
+    setEditingItem(null);
+    setActiveCartQr(null);
+  };
 
   const handlePriceBlur = (item: CartItem, newPrice: number) => {
     const discountPercent = ((item.originalPrice - newPrice) / item.originalPrice) * 100;
@@ -119,27 +183,33 @@ export function CartList({
                     </Button>
                   </td>
 
-                  {/* Item Details - Name and QR inline */}
+                  {/* Item Details - Name and QR */}
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="font-semibold text-sm text-foreground min-w-[120px]">{item.category}
-                        {item.isManualEntry ? (
-                          <div className="flex items-center gap-1 my-1">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-300 bg-amber-50 text-amber-700 font-medium">
-                              Quick Sale
-                            </Badge>
-                            {item.manualNote && (
-                              <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px]" title={item.manualNote}>
-                                {item.manualNote}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-muted-foreground/70 font-mono tracking-tight bg-muted/40 px-2 py-0.5 my-1 rounded border border-border/30">
-                            {item.qrCode}
-                          </div>
-                        )}
-                      </div>
+                    <div className="font-semibold text-sm text-foreground min-w-[120px]">{item.category}
+                      {item.isManualEntry ? (
+                        <div className="flex items-center gap-1 my-1">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-300 bg-amber-50 text-amber-700 font-medium">
+                            Quick Sale
+                          </Badge>
+                          {item.manualNote && (
+                            <span className="text-[10px] text-muted-foreground/70 truncate max-w-[120px]" title={item.manualNote}>
+                              {item.manualNote}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleQrClick(item)}
+                          disabled={isStaff || loadingItemId === item.inventoryItemId}
+                          className={`block text-[10px] text-muted-foreground/70 font-mono tracking-tight bg-muted/40 px-2 py-0.5 my-1 rounded border border-border/30 text-left ${
+                            !isStaff ? 'cursor-pointer hover:bg-muted/70 hover:border-brand-300 hover:text-foreground transition-colors' : ''
+                          }`}
+                          title={!isStaff ? 'Click to view/edit item details' : undefined}
+                        >
+                          {loadingItemId === item.inventoryItemId ? 'Loading…' : item.qrCode}
+                        </button>
+                      )}
                     </div>
                   </td>
 
@@ -260,6 +330,20 @@ export function CartList({
           </tbody>
         </table>
       </div>
+
+      {/* Inventory Item Details Dialog */}
+      <InventoryItemDetailsDialog
+        item={viewingItem}
+        onClose={() => { setViewingItem(null); setActiveCartQr(null); }}
+        onEdit={handleEditFromDetails}
+      />
+
+      {/* Edit Inventory Item Dialog */}
+      <EditInventoryItemDialog
+        item={editingItem}
+        onClose={() => { setEditingItem(null); setActiveCartQr(null); }}
+        onSaved={handleEditSaved}
+      />
 
       {/* Price Drop Warning Dialog */}
       <ConfirmDialog

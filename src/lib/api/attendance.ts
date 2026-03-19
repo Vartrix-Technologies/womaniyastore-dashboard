@@ -6,6 +6,16 @@ type AttendanceLog = Database['public']['Tables']['attendance_logs']['Row'];
 type AttendanceInsert = Database['public']['Tables']['attendance_logs']['Insert'];
 type AttendanceStatus = Database['public']['Enums']['attendance_status'];
 
+// Maximum allowed shift duration in hours. Shifts auto-closed by cron or
+// client-side logic will be capped at this duration from clock_in.
+const MAX_SHIFT_HOURS = 16;
+const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
+
+export interface AutoClosedSession {
+  id: string;
+  date: string;
+}
+
 export interface TodayAttendance {
   id: string;
   clock_in: string;
@@ -29,13 +39,14 @@ export interface AttendanceStats {
 }
 
 /**
- * Clock in for today
+ * Auto-close stale open attendance sessions from previous days.
+ * Sets clock_out to 4:00 AM IST next day, capped at MAX_SHIFT_HOURS from clock_in.
+ * Returns the list of auto-closed sessions for UI notifications.
  */
-export async function clockIn(staffId: string, shopId: string): Promise<{ data: AttendanceLog | null; error: any }> {
+export async function autoCloseStaleAttendance(staffId: string): Promise<AutoClosedSession[]> {
   const today = getISTDateString();
-  const now = getNowISO();
+  const closed: AutoClosedSession[] = [];
 
-  // Auto-close any stale open sessions from previous days
   const { data: staleRecords } = await supabase
     .from('attendance_logs')
     .select('id, date, clock_in')
@@ -44,21 +55,40 @@ export async function clockIn(staffId: string, shopId: string): Promise<{ data: 
     .is('deleted_at', null)
     .neq('date', today);
 
-  if (staleRecords && staleRecords.length > 0) {
-    for (const stale of staleRecords) {
-      // Auto-close at 02:00 AM IST of the next day
-      const nextDay = getNextDayDateString(stale.date);
-      const autoClockOut = buildISTTimestamp(nextDay, '02:00');
-      await supabase
-        .from('attendance_logs')
-        .update({
-          clock_out: autoClockOut,
-          status: 'closed' as AttendanceStatus,
-          edit_reason: 'Auto-closed: staff did not clock out',
-        })
-        .eq('id', stale.id);
-    }
+  if (!staleRecords || staleRecords.length === 0) return closed;
+
+  for (const stale of staleRecords) {
+    // 4:00 AM IST the day after the shift date
+    const autoCloseAt = new Date(buildISTTimestamp(getNextDayDateString(stale.date), '04:00'));
+    // Cap at MAX_SHIFT_HOURS from clock_in
+    const maxFromClockIn = new Date(new Date(stale.clock_in).getTime() + MAX_SHIFT_MS);
+    const cappedClockOut = autoCloseAt < maxFromClockIn ? autoCloseAt : maxFromClockIn;
+
+    await supabase
+      .from('attendance_logs')
+      .update({
+        clock_out: cappedClockOut.toISOString(),
+        status: 'closed' as AttendanceStatus,
+        edit_reason: 'Auto-closed: staff did not clock out',
+      })
+      .eq('id', stale.id);
+
+    closed.push({ id: stale.id, date: stale.date });
   }
+
+  return closed;
+}
+
+/**
+ * Clock in for today.
+ * Automatically closes any stale open sessions from previous days first.
+ */
+export async function clockIn(staffId: string, shopId: string): Promise<{ data: AttendanceLog | null; error: any; autoClosedSessions: AutoClosedSession[] }> {
+  const today = getISTDateString();
+  const now = getNowISO();
+
+  // Auto-close any stale open sessions from previous days
+  const autoClosedSessions = await autoCloseStaleAttendance(staffId);
 
   // Check if already clocked in today
   const { data: existing } = await supabase
@@ -72,7 +102,8 @@ export async function clockIn(staffId: string, shopId: string): Promise<{ data: 
   if (existing) {
     return { 
       data: null, 
-      error: { message: 'Already clocked in today' } 
+      error: { message: 'Already clocked in today' },
+      autoClosedSessions,
     };
   }
 
@@ -91,7 +122,7 @@ export async function clockIn(staffId: string, shopId: string): Promise<{ data: 
     .select()
     .single();
 
-  return { data, error };
+  return { data, error, autoClosedSessions };
 }
 
 /**
@@ -114,30 +145,31 @@ export async function clockOut(attendanceId: string): Promise<{ data: Attendance
 }
 
 /**
- * Get today's attendance record — or any stale open session from a previous day.
- * 
- * Priority:
- * 1. Any open (status='open') attendance from ANY date (catches forgotten clock-outs)
- * 2. Today's closed attendance record
+ * Get today's attendance record.
+ * Auto-closes any stale open sessions from previous days first,
+ * so the staff member is never blocked from clocking in today.
  */
-export async function getTodayAttendance(staffId: string): Promise<{ data: TodayAttendance | null; error: any }> {
-  // First: check for any open attendance record (catches stale sessions from previous days)
+export async function getTodayAttendance(staffId: string): Promise<{ data: TodayAttendance | null; error: any; autoClosedSessions: AutoClosedSession[] }> {
+  // Auto-close stale sessions (previous days left open)
+  const autoClosedSessions = await autoCloseStaleAttendance(staffId);
+
+  const today = getISTDateString();
+
+  // Check for today's open session first
   const { data: openRecord, error: openError } = await supabase
     .from('attendance_logs')
     .select('id, clock_in, clock_out, status, total_break_minutes, date')
     .eq('staff_id', staffId)
     .eq('status', 'open')
+    .eq('date', today)
     .is('deleted_at', null)
-    .order('date', { ascending: false })
-    .limit(1)
     .maybeSingle();
 
   if (!openError && openRecord) {
-    return { data: openRecord, error: null };
+    return { data: openRecord, error: null, autoClosedSessions };
   }
 
-  // Second: check for today's record (may be closed)
-  const today = getISTDateString();
+  // Fall back to today's closed record
   const { data, error } = await supabase
     .from('attendance_logs')
     .select('id, clock_in, clock_out, status, total_break_minutes, date')
@@ -146,7 +178,7 @@ export async function getTodayAttendance(staffId: string): Promise<{ data: Today
     .is('deleted_at', null)
     .maybeSingle();
 
-  return { data, error };
+  return { data, error, autoClosedSessions };
 }
 
 /**

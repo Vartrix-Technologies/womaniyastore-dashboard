@@ -210,6 +210,14 @@ export default function POSPage() {
     );
   }, []);
 
+  const handleRefreshItem = useCallback((qrCode: string, updates: Partial<CartItem>) => {
+    setCart(prevCart =>
+      prevCart.map((item) =>
+        item.qrCode === qrCode ? { ...item, ...updates } : item
+      )
+    );
+  }, []);
+
   const handleCheckoutComplete = (completedSale?: { id: string; bill_number: number; bill_prefix: string; total_amount: number; created_at: string }) => {
     cartRef.current = [];
     setCart([]);
@@ -292,18 +300,7 @@ export default function POSPage() {
             <CardContent className="p-4 space-y-3">
               {/* Action Buttons */}
               <div className="space-y-3">
-                {/* Scan QR - Full width on mobile, first row */}
-                <div>
-                  <ScanQRButton
-                    onItemScanned={handleQRScanned}
-                    onManualEntry={() => {
-                      setSearchManualEntry(true);
-                      setSearchOpen(true);
-                    }}
-                  />
-                </div>
-
-                {/* Search + Quick Add - Side by side, full row on all screens */}
+                {/* Search + Quick Add - Side by side, top row */}
                 <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
                   {/* Search Button */}
                   <Button
@@ -330,6 +327,17 @@ export default function POSPage() {
                       <div className="text-xs text-muted-foreground">No QR code needed</div>
                     </div>
                   </Button>
+                </div>
+
+                {/* Scan QR - Full width, bottom for easy thumb reach on mobile */}
+                <div>
+                  <ScanQRButton
+                    onItemScanned={handleQRScanned}
+                    onManualEntry={() => {
+                      setSearchManualEntry(true);
+                      setSearchOpen(true);
+                    }}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -368,6 +376,7 @@ export default function POSPage() {
                   onUpdatePrice={handleUpdatePrice}
                   onUpdateDiscountReason={handleUpdateDiscountReason}
                   onUpdateSaleType={handleUpdateSaleType}
+                  onRefreshItem={handleRefreshItem}
                   onClearCart={handleClearCart}
                 />
                 </div>

@@ -520,6 +520,12 @@ function InventoryPageContent() {
     toast.success(`${cartItem.category} queued — redirecting to POS`, { duration: 2000 });
     router.push('/pos');
   }, [router]);
+
+  const handleEditFromDetails = useCallback((item: InventoryItemForList) => {
+    setViewingItem(null);
+    setEditingTableItem(item);
+  }, []);
+
   if (statusFilter !== 'all') filterChips.push({ label: 'Status', value: statusFilter, onClear: () => { setStatusFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
   if (categoryFilter !== 'all') filterChips.push({ label: 'Category', value: categories.find(c => c.id === categoryFilter)?.name || categoryFilter, onClear: () => { setCategoryFilter('all'); setCurrentPage(1); } });
   if (saleTypeFilter !== 'all') filterChips.push({ label: 'Order Type', value: saleTypeFilter === 'normal' ? 'Normal' : saleTypeFilter === 'promotion' ? 'Promotion Sale' : saleTypeFilter === 'festival' ? 'Festival Sale' : saleTypeFilter, onClear: () => { setSaleTypeFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
@@ -925,6 +931,7 @@ function InventoryPageContent() {
       <InventoryItemDetailsDialog
         item={viewingItem}
         onClose={() => setViewingItem(null)}
+        onEdit={handleEditFromDetails}
         onAddToCart={handleAddToCart}
       />
 

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.4"
   }
   graphql_public: {
     Tables: {
@@ -383,47 +383,27 @@ export type Database = {
       }
       expense_categories: {
         Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
+          created_at: string | null
           id: string
           name: string
           shop_id: string
           updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
+          created_at?: string | null
           id?: string
           name: string
           shop_id: string
           updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
+          created_at?: string | null
           id?: string
           name?: string
           shop_id?: string
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "expense_categories_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "expense_categories_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "expense_categories_shop_id_fkey"
             columns: ["shop_id"]
@@ -437,44 +417,35 @@ export type Database = {
         Row: {
           amount: number
           category_id: string | null
-          created_at: string
-          created_by: string | null
+          created_at: string | null
           description: string | null
-          expense_category_id: string | null
           id: string
           occurred_at: string
-          payment_method: string | null
-          related_sale_id: string | null
           shop_id: string
-          type: Database["public"]["Enums"]["financial_tx_type"]
+          type: string
+          updated_at: string | null
         }
         Insert: {
           amount: number
           category_id?: string | null
-          created_at?: string
-          created_by?: string | null
+          created_at?: string | null
           description?: string | null
-          expense_category_id?: string | null
           id?: string
-          occurred_at: string
-          payment_method?: string | null
-          related_sale_id?: string | null
+          occurred_at?: string
           shop_id: string
-          type: Database["public"]["Enums"]["financial_tx_type"]
+          type: string
+          updated_at?: string | null
         }
         Update: {
           amount?: number
           category_id?: string | null
-          created_at?: string
-          created_by?: string | null
+          created_at?: string | null
           description?: string | null
-          expense_category_id?: string | null
           id?: string
           occurred_at?: string
-          payment_method?: string | null
-          related_sale_id?: string | null
           shop_id?: string
-          type?: Database["public"]["Enums"]["financial_tx_type"]
+          type?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -482,34 +453,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "expense_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_transactions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_transactions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "financial_transactions_expense_category_id_fkey"
-            columns: ["expense_category_id"]
-            isOneToOne: false
-            referencedRelation: "expense_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_transactions_related_sale_id_fkey"
-            columns: ["related_sale_id"]
-            isOneToOne: false
-            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
           {
@@ -585,34 +528,49 @@ export type Database = {
       }
       inventory_items: {
         Row: {
+          cost_price: number
           created_at: string
           id: string
           lot_id: string
           qr_code_id: string
           sale_item_id: string | null
+          sale_reason: string | null
+          sale_type: string | null
+          selling_price: number
           shop_id: string
           sold_at: string | null
           status: Database["public"]["Enums"]["inventory_status"]
+          tax_rate: number
         }
         Insert: {
+          cost_price: number
           created_at?: string
           id?: string
           lot_id: string
           qr_code_id: string
           sale_item_id?: string | null
+          sale_reason?: string | null
+          sale_type?: string | null
+          selling_price: number
           shop_id: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["inventory_status"]
+          tax_rate: number
         }
         Update: {
+          cost_price?: number
           created_at?: string
           id?: string
           lot_id?: string
           qr_code_id?: string
           sale_item_id?: string | null
+          sale_reason?: string | null
+          sale_type?: string | null
+          selling_price?: number
           shop_id?: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["inventory_status"]
+          tax_rate?: number
         }
         Relationships: [
           {
@@ -879,41 +837,47 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          category_name: string | null
           created_at: string
           discount_reason: string | null
           final_price: number
           id: string
-          inventory_item_id: string
+          inventory_item_id: string | null
           original_price: number
           sale_id: string
           sale_type: string | null
           shop_id: string
+          size_name: string | null
           sold_on_sale: boolean
           tax_amount: number
         }
         Insert: {
+          category_name?: string | null
           created_at?: string
           discount_reason?: string | null
           final_price: number
           id?: string
-          inventory_item_id: string
+          inventory_item_id?: string | null
           original_price: number
           sale_id: string
           sale_type?: string | null
           shop_id: string
+          size_name?: string | null
           sold_on_sale?: boolean
           tax_amount?: number
         }
         Update: {
+          category_name?: string | null
           created_at?: string
           discount_reason?: string | null
           final_price?: number
           id?: string
-          inventory_item_id?: string
+          inventory_item_id?: string | null
           original_price?: number
           sale_id?: string
           sale_type?: string | null
           shop_id?: string
+          size_name?: string | null
           sold_on_sale?: boolean
           tax_amount?: number
         }
@@ -921,7 +885,7 @@ export type Database = {
           {
             foreignKeyName: "sale_items_inventory_item_id_fkey"
             columns: ["inventory_item_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },

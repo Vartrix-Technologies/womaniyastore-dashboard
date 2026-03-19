@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, LogIn, LogOut, Coffee, AlertTriangle } from 'lucide-react';
+import { Clock, LogIn, LogOut, Coffee, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { clockIn, clockOut, getTodayAttendance, TodayAttendance } from '@/lib/api/attendance';
+import { clockIn, clockOut, getTodayAttendance, TodayAttendance, AutoClosedSession } from '@/lib/api/attendance';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { formatTimeIST, getISTDateString, isBeforeToday } from '@/lib/utils/timezone';
+import { formatTimeIST } from '@/lib/utils/timezone';
 
 export function AttendanceCard() {
   const { user, profile } = useAuth();
@@ -19,6 +19,7 @@ export function AttendanceCard() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
   const [showClockOutConfirm, setShowClockOutConfirm] = useState(false);
+  const [autoClosedSessions, setAutoClosedSessions] = useState<AutoClosedSession[]>([]);
 
   // Fetch today's attendance on mount
   useEffect(() => {
@@ -67,9 +68,14 @@ export function AttendanceCard() {
   const loadTodayAttendance = async () => {
     if (!user?.id) return;
 
-    const { data, error } = await getTodayAttendance(user.id);
+    const { data, error, autoClosedSessions: closed } = await getTodayAttendance(user.id);
     if (!error && data) {
       setAttendance(data);
+    }
+    if (closed && closed.length > 0) {
+      setAutoClosedSessions(closed);
+      const dates = closed.map(s => s.date).join(', ');
+      toast.info(`Unclosed shift from ${dates} was auto-closed`);
     }
     setInitialLoading(false);
   };
@@ -81,7 +87,13 @@ export function AttendanceCard() {
     }
 
     setLoading(true);
-    const { data, error } = await clockIn(user.id, profile.shop_id);
+    const { data, error, autoClosedSessions: closed } = await clockIn(user.id, profile.shop_id);
+
+    if (closed && closed.length > 0) {
+      setAutoClosedSessions(closed);
+      const dates = closed.map(s => s.date).join(', ');
+      toast.info(`Unclosed shift from ${dates} was auto-closed`);
+    }
 
     if (error) {
       toast.error(error.message || 'Failed to clock in');
@@ -118,17 +130,10 @@ export function AttendanceCard() {
         total_break_minutes: data.total_break_minutes,
         date: data.date,
       });
-      // If this was a stale session, reload to check for today's record
-      if (isStaleSession) {
-        setTimeout(() => loadTodayAttendance(), 500);
-      }
     }
 
     setLoading(false);
   };
-
-  // Check if current attendance is from a previous day (stale session)
-  const isStaleSession = attendance && isBeforeToday(attendance.date);
 
   const formatTime = (isoString: string | null) => formatTimeIST(isoString);
 
@@ -173,19 +178,19 @@ export function AttendanceCard() {
           Attendance
         </CardTitle>
         <CardDescription>
-          {isStaleSession
-            ? `⚠️ You forgot to clock out on ${attendance?.date}. Please clock out first.`
-            : attendance ? 'Today\'s attendance record' : 'No attendance record for today'}
+          {attendance ? 'Today\'s attendance record' : 'No attendance record for today'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Stale Session Warning */}
-        {isStaleSession && (
-          <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-yellow-800">
-              <p className="font-medium">Unclosed session from {attendance?.date}</p>
-              <p className="text-yellow-700 mt-0.5">Please clock out of this session before clocking in for today.</p>
+        {/* Auto-closed session info */}
+        {autoClosedSessions.length > 0 && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 flex items-start gap-2">
+            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium">Shift auto-closed</p>
+              <p className="text-blue-700 mt-0.5">
+                Your unclosed shift from {autoClosedSessions.map(s => s.date).join(', ')} was automatically closed. You can clock in for today.
+              </p>
             </div>
           </div>
         )}

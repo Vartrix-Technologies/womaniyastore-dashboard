@@ -57,7 +57,7 @@ interface SaleTypeAnalysisProps {
 export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: SaleTypeAnalysisProps) {
   const [loading, setLoading] = useState(true);
   const [saleTypeData, setSaleTypeData] = useState<SaleTypeData[]>([]);
-  const [topCustomer, setTopCustomer] = useState<{ name: string; orders: number; revenue: number } | null>(null);
+  const [topCustomer, setTopCustomer] = useState<{ name: string; phone: string | null; orders: number; revenue: number } | null>(null);
   const [totals, setTotals] = useState({
     totalItems: 0,
     totalRevenue: 0,
@@ -82,6 +82,7 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
           id,
           created_at,
           customer_name,
+          customer_phone,
           total_amount,
           sale_items (
             id,
@@ -113,17 +114,20 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
       };
 
       // Aggregate by sale type
-      const customerMap: Record<string, { orders: number; revenue: number }> = {};
+      const customerMap: Record<string, { orders: number; revenue: number; phone: string | null }> = {};
 
       salesData?.forEach((sale: any) => {
         // Track customer orders
         const customerName = sale.customer_name;
         if (customerName) {
           if (!customerMap[customerName]) {
-            customerMap[customerName] = { orders: 0, revenue: 0 };
+            customerMap[customerName] = { orders: 0, revenue: 0, phone: null };
           }
           customerMap[customerName].orders += 1;
           customerMap[customerName].revenue += sale.total_amount || 0;
+          if (sale.customer_phone) {
+            customerMap[customerName].phone = sale.customer_phone;
+          }
         }
 
         sale.sale_items?.forEach((item: any) => {
@@ -215,7 +219,7 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
       const customerEntries = Object.entries(customerMap);
       if (customerEntries.length > 0) {
         const [topName, topData] = customerEntries.sort((a, b) => b[1].orders - a[1].orders)[0];
-        setTopCustomer({ name: topName, orders: topData.orders, revenue: topData.revenue });
+        setTopCustomer({ name: topName, phone: topData.phone, orders: topData.orders, revenue: topData.revenue });
       } else {
         setTopCustomer(null);
       }
@@ -266,6 +270,9 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="text-xl font-bold truncate">{topCustomer.name}</div>
+                {topCustomer.phone && (
+                  <div className="text-sm text-muted-foreground">{topCustomer.phone}</div>
+                )}
                 <div className="text-sm text-muted-foreground">
                   {topCustomer.orders} orders placed
                 </div>
