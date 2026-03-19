@@ -15,8 +15,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { SyncStatusIndicator } from '@/components/shared/SyncStatusIndicator';
 import { ThemePickerDialog } from '@/components/shared/ThemePickerDialog';
+import { ProcessReturnDialog } from '@/components/shared/ProcessReturnDialog';
 import { appConfig } from '@/lib/config';
-import { LogOut, Settings, HelpCircle, Palette, Sun, Moon, Search, BookOpen } from 'lucide-react';
+import { LogOut, Settings, HelpCircle, Palette, Sun, Moon, Search, BookOpen, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ export function TopBar({ profile, shopName }: TopBarProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -211,6 +213,11 @@ export function TopBar({ profile, shopName }: TopBarProps) {
                   Theme
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setReturnDialogOpen(true)} className="gap-2 rounded-lg cursor-pointer">
+                  <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                  Mark a Return
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleSignOut}
                   className="gap-2 rounded-lg cursor-pointer text-red-500 focus:text-red-500"
@@ -226,6 +233,9 @@ export function TopBar({ profile, shopName }: TopBarProps) {
 
       {/* Theme Picker Dialog */}
       <ThemePickerDialog open={themePickerOpen} onOpenChange={setThemePickerOpen} />
+
+      {/* Process Return Dialog */}
+      <ProcessReturnDialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen} />
     </header>
   );
 }

@@ -11,6 +11,7 @@ import { ProductSearchDialog } from '@/components/pos/ProductSearchDialog';
 import { QuickAddItemDialog } from '@/components/pos/QuickAddItemDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { BillPreviewDialog } from '@/components/shared/BillPreviewDialog';
+import { ProcessReturnDialog } from '@/components/shared/ProcessReturnDialog';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QrCode, Trash2, Search, ShoppingBag, ArrowLeft, Zap } from 'lucide-react';
@@ -71,7 +72,9 @@ export default function POSPage() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [clearCartDialogOpen, setClearCartDialogOpen] = useState(false);
   const [billPreviewSale, setBillPreviewSale] = useState<Sale | null>(null);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const cartRef = useRef<CartItem[]>([]);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -256,7 +259,26 @@ export default function POSPage() {
             <ArrowLeft className="h-3 w-3 text-muted-foreground" />
           </div>
         </button>
-        <div>
+        <div
+          onPointerDown={() => {
+            longPressTimerRef.current = setTimeout(() => {
+              setReturnDialogOpen(true);
+            }, 2000);
+          }}
+          onPointerUp={() => {
+            if (longPressTimerRef.current) {
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = null;
+            }
+          }}
+          onPointerLeave={() => {
+            if (longPressTimerRef.current) {
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = null;
+            }
+          }}
+          className="select-none"
+        >
           <h1 className="text-2xl font-bold tracking-tight">Make a Purchase</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Scan items or search to add to cart</p>
         </div>
@@ -419,6 +441,12 @@ export default function POSPage() {
         open={!!billPreviewSale}
         onOpenChange={(open) => { if (!open) setBillPreviewSale(null); }}
         sale={billPreviewSale}
+      />
+
+      {/* Process Return Dialog — opened via long-press on title */}
+      <ProcessReturnDialog
+        open={returnDialogOpen}
+        onOpenChange={setReturnDialogOpen}
       />
     </div>
   );
