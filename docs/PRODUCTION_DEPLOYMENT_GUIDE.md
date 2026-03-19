@@ -98,28 +98,13 @@ You now have: `main` (production) and `dev` (development) branches with clean hi
 4. Wait for project to finish provisioning (~2 minutes)
 5. Note down:
    - **Project Reference ID** (from URL: `https://supabase.com/dashboard/project/<ref-id>`)
-   mjtopwjogmijavcuyumd
    - **API URL** (`https://<ref-id>.supabase.co`)
-   https://mjtopwjogmijavcuyumd.supabase.co
    - **Anon Key** (Settings → API → `anon` `public` key)
-   eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qdG9wd2pvZ21pamF2Y3V5dW1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODgxMTcsImV4cCI6MjA4ODM2NDExN30.w4GBEt43sNGxcm_ZszDCtn3_jIecqEbAVZ40el8xV2s
-
-   publishable key -
-   sb_publishable_iMue2StJPZEXREB875psyw_8y3offT9
+   - **Publishable Key**
    - **Service Role Key** (Settings → API → `service_role` key — keep secret!)
+   - **Database connection string** (`postgresql://postgres:[YOUR-PASSWORD]@db.<ref-id>.supabase.co:5432/postgres`)
 
-   Database key - 
-   postgresql://postgres:[YOUR-PASSWORD]@db.mjtopwjogmijavcuyumd.supabase.co:5432/postgres
-
-   SERVICE KEY
-   const SERVICE_KEY = 'SUPABASE_SERVICE_KEY'
-   Example usage
-   const SUPABASE_URL = "https://mjtopwjogmijavcuyumd.supabase.co"
-   const supabase = createClient(SUPABASE_URL, process.env.SERVICE_KEY);
-
-   .env
-   EXPO_PUBLIC_SUPABASE_URL=https://mjtopwjogmijavcuyumd.supabase.co
-EXPO_PUBLIC_SUPABASE_KEY=sb_publishable_iMue2StJPZEXREB875psyw_8y3offT9
+   > **⚠️ NEVER commit real keys to this file. Store them in a password manager or Supabase Vault.**
 
 ### Step 6 — Link Supabase CLI to New Project
 ```powershell
@@ -182,9 +167,7 @@ In the Supabase Dashboard → SQL Editor, run:
 --   Auto Confirm: ON
 --
 -- Note the user's UUID from the Users list, then run:
-admin - 079f51f4-8445-40b8-acb8-cae1f2ab02ff
-superadmin - 9b97dd13-e9d4-421f-98e7-a0f2ea8b4249
- 
+
 INSERT INTO profiles (id, full_name, role, is_active, must_change_password)
 VALUES (
   '<user-uuid-from-auth>',
