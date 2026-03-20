@@ -155,6 +155,14 @@ export async function updateChecklistTemplate(
  * Delete checklist template
  */
 export async function deleteChecklistTemplate(checklistId: string) {
+  // Delete checklist_items first (FK has no ON DELETE CASCADE)
+  const { error: itemsError } = await supabase
+    .from('checklist_items')
+    .delete()
+    .eq('checklist_id', checklistId);
+
+  if (itemsError) throw itemsError;
+
   const { error } = await supabase
     .from('checklists')
     .delete()

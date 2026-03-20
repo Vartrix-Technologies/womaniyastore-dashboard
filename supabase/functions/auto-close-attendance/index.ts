@@ -1,10 +1,10 @@
 // Supabase Edge Function: Auto-close stale attendance sessions
 // Deploy: supabase functions deploy auto-close-attendance
-// Schedule: Run nightly at 4:00 AM IST (10:30 PM UTC) via pg_cron + pg_net
+// Schedule: Run nightly at 12:05 AM IST (6:35 PM UTC) via pg_cron + pg_net
 //
 // This function finds all attendance_logs with status='open' from a date
 // before today (IST) and closes them. The clock_out is set to the earlier of:
-//   - 4:00 AM IST the day after the shift date
+//   - Midnight IST (end of shift day)
 //   - clock_in + 16 hours (MAX_SHIFT_HOURS cap)
 
 // @ts-nocheck
@@ -58,11 +58,11 @@ Deno.serve(async (req: Request) => {
 
     for (const record of staleRecords) {
       try {
-        // Calculate auto-close time: 4:00 AM IST next day after shift date
+        // Calculate auto-close time: Midnight IST (end of shift day = 00:00 next day)
         const [year, month, day] = record.date.split('-').map(Number);
         const nextDay = new Date(year, month - 1, day + 1);
         const nextDayStr = nextDay.toLocaleDateString('en-CA');
-        const autoCloseAtIST = `${nextDayStr}T04:00:00+05:30`;
+        const autoCloseAtIST = `${nextDayStr}T00:00:00+05:30`;
         const autoCloseDate = new Date(autoCloseAtIST);
 
         // Cap at MAX_SHIFT_HOURS from clock_in

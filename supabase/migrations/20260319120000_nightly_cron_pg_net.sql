@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Migration: Unified nightly cron — attendance auto-close + daily checklists
 -- ============================================================================
--- Runs at 4:00 AM IST (22:30 UTC) every day via pg_cron.
+-- Runs at 12:05 AM IST (18:35 UTC) every day via pg_cron.
 -- Uses pg_net to call Edge Functions from DB functions (middleman pattern).
 --
 -- Architecture:
@@ -101,13 +101,21 @@ RETURNS void AS $$
 BEGIN
   RAISE LOG '[nightly-cron] Starting nightly tasks at %', NOW() AT TIME ZONE 'Asia/Kolkata';
 
-  -- Task 1: Auto-close stale attendance (pure SQL — no HTTP needed)
-  PERFORM auto_close_stale_attendance();
-  RAISE LOG '[nightly-cron] Attendance auto-close complete';
+  -- Task 1: Auto-close stale attendance (isolated — failure won't block checklists)
+  BEGIN
+    PERFORM auto_close_stale_attendance();
+    RAISE LOG '[nightly-cron] Attendance auto-close complete';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING '[nightly-cron] Attendance auto-close FAILED: %', SQLERRM;
+  END;
 
-  -- Task 2: Create daily checklists (via Edge Function + pg_net)
-  PERFORM invoke_create_daily_checklists();
-  RAISE LOG '[nightly-cron] Daily checklist creation invoked';
+  -- Task 2: Create daily checklists (isolated — failure won't block other tasks)
+  BEGIN
+    PERFORM invoke_create_daily_checklists();
+    RAISE LOG '[nightly-cron] Daily checklist creation invoked';
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING '[nightly-cron] Checklist creation FAILED: %', SQLERRM;
+  END;
 
   RAISE LOG '[nightly-cron] All nightly tasks complete';
 END;
@@ -115,12 +123,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, extensions;
 
 COMMENT ON FUNCTION run_nightly_tasks() IS
-  'Runs at 4:00 AM IST daily via pg_cron. '
+  'Runs at 12:05 AM IST daily via pg_cron. '
   '1) Auto-closes stale attendance sessions. '
   '2) Creates daily checklist instances via Edge Function.';
 
 
--- 5. Schedule the cron job — 4:00 AM IST = 22:30 UTC (previous day)
+-- 5. Schedule the cron job — 12:05 AM IST = 18:35 UTC
 -- Unschedule any previous versions first
 SELECT cron.unschedule('nightly-tasks') WHERE EXISTS (
   SELECT 1 FROM cron.job WHERE jobname = 'nightly-tasks'
@@ -128,7 +136,7 @@ SELECT cron.unschedule('nightly-tasks') WHERE EXISTS (
 
 SELECT cron.schedule(
   'nightly-tasks',
-  '30 22 * * *',  -- 22:30 UTC = 4:00 AM IST daily
+  '35 18 * * *',  -- 18:35 UTC = 12:05 AM IST daily
   $$SELECT run_nightly_tasks()$$
 );
 

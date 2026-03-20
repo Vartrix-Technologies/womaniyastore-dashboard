@@ -40,7 +40,7 @@ export interface AttendanceStats {
 
 /**
  * Auto-close stale open attendance sessions from previous days.
- * Sets clock_out to 4:00 AM IST next day, capped at MAX_SHIFT_HOURS from clock_in.
+ * Sets clock_out to midnight IST (end of shift day), capped at MAX_SHIFT_HOURS from clock_in.
  * Returns the list of auto-closed sessions for UI notifications.
  */
 export async function autoCloseStaleAttendance(staffId: string): Promise<AutoClosedSession[]> {
@@ -58,11 +58,16 @@ export async function autoCloseStaleAttendance(staffId: string): Promise<AutoClo
   if (!staleRecords || staleRecords.length === 0) return closed;
 
   for (const stale of staleRecords) {
-    // 4:00 AM IST the day after the shift date
-    const autoCloseAt = new Date(buildISTTimestamp(getNextDayDateString(stale.date), '04:00'));
+    // Midnight IST (end of shift day = 00:00 next day)
+    const autoCloseAt = new Date(buildISTTimestamp(getNextDayDateString(stale.date), '00:00'));
     // Cap at MAX_SHIFT_HOURS from clock_in
-    const maxFromClockIn = new Date(new Date(stale.clock_in).getTime() + MAX_SHIFT_MS);
-    const cappedClockOut = autoCloseAt < maxFromClockIn ? autoCloseAt : maxFromClockIn;
+    const clockInMs = new Date(stale.clock_in).getTime();
+    const maxFromClockIn = new Date(clockInMs + MAX_SHIFT_MS);
+    let cappedClockOut = autoCloseAt < maxFromClockIn ? autoCloseAt : maxFromClockIn;
+    // Safety: ensure clock_out > clock_in (e.g. clock_in was after midnight)
+    if (cappedClockOut.getTime() <= clockInMs) {
+      cappedClockOut = new Date(clockInMs + 60_000); // +1 minute
+    }
 
     await supabase
       .from('attendance_logs')

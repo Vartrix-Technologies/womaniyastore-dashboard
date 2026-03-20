@@ -27,13 +27,19 @@ BEGIN
       AND deleted_at IS NULL
       AND date < today_ist
   LOOP
-    -- 4:00 AM IST the day after the shift date
-    auto_clock_out := ((stale.date + INTERVAL '1 day' + INTERVAL '4 hours') AT TIME ZONE 'Asia/Kolkata');
+    -- Midnight IST (end of shift day = 00:00 next day)
+    auto_clock_out := ((stale.date + INTERVAL '1 day') AT TIME ZONE 'Asia/Kolkata');
     -- Cap at max_shift_hours from clock_in
     max_from_clock_in := stale.clock_in + (max_shift_hours * INTERVAL '1 hour');
 
     IF auto_clock_out > max_from_clock_in THEN
       auto_clock_out := max_from_clock_in;
+    END IF;
+
+    -- Safety: if clock_out still <= clock_in (e.g. clock_in was after midnight
+    -- but date was previous day), fall back to clock_in + 1 minute
+    IF auto_clock_out <= stale.clock_in THEN
+      auto_clock_out := stale.clock_in + INTERVAL '1 minute';
     END IF;
 
     UPDATE attendance_logs
@@ -52,7 +58,7 @@ SET search_path = public;
 
 COMMENT ON FUNCTION auto_close_stale_attendance() IS
   'Auto-closes all open attendance sessions from previous days. '
-  'Clock-out is set to 4:00 AM IST next day, capped at 16 hours from clock_in.';
+  'Clock-out is set to midnight IST (end of shift day), capped at 16 hours from clock_in.';
 
 
 -- 2. Enhanced clock time validation with max shift duration
@@ -64,8 +70,13 @@ DECLARE
   shift_duration interval;
 BEGIN
   -- If clock_out exists, ensure it's after clock_in
+  -- For auto-closed records, fix silently instead of rejecting
   IF NEW.clock_out IS NOT NULL AND NEW.clock_out <= NEW.clock_in THEN
-    RAISE EXCEPTION 'Clock out time must be after clock in time';
+    IF NEW.edit_reason LIKE 'Auto-closed:%' THEN
+      NEW.clock_out := NEW.clock_in + INTERVAL '1 minute';
+    ELSE
+      RAISE EXCEPTION 'Clock out time must be after clock in time';
+    END IF;
   END IF;
 
   -- Validate break time isn't too long

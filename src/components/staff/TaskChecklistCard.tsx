@@ -28,7 +28,7 @@ export interface TaskChecklistHookData {
   handleToggleItem: (instanceId: string, checklistItemId: string, isCompleted: boolean) => Promise<void>;
 }
 
-export function useTaskChecklists(): TaskChecklistHookData {
+export function useTaskChecklists(enabled = true): TaskChecklistHookData {
   const { profile } = useAuth();
   const [checklists, setChecklists] = useState<ChecklistInstanceWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,12 +50,31 @@ export function useTaskChecklists(): TaskChecklistHookData {
   }, [profile?.shop_id]);
 
   useEffect(() => {
-    if (profile?.shop_id) {
-      loadChecklists();
-      const interval = setInterval(loadChecklists, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [profile?.shop_id, loadChecklists]);
+    if (!profile?.shop_id || !enabled) return;
+    loadChecklists();
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (!interval) interval = setInterval(loadChecklists, 60000);
+    };
+    const stopPolling = () => {
+      if (interval) { clearInterval(interval); interval = null; }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') startPolling();
+      else stopPolling();
+    };
+
+    if (document.visibilityState === 'visible') startPolling();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [profile?.shop_id, loadChecklists, enabled]);
 
   const handleToggleItem = useCallback(async (
     instanceId: string,

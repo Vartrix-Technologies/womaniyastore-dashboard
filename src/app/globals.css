@@ -224,6 +224,29 @@ html {
   border-radius: 4px;
 }
 
+/* Auto-hide scrollbar: always reserves space (no layout shift), thumb visible only on hover */
+.scroll-fade {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-fade::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-fade::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-fade::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+}
+.scroll-fade:hover {
+  scrollbar-color: hsl(var(--muted)) transparent;
+}
+.scroll-fade:hover::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted));
+}
+
 /* QR Scanner styles */
 #qr-reader {
   border-radius: 0.5rem;

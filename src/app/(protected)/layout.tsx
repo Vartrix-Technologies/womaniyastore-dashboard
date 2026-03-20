@@ -9,7 +9,7 @@ import { useSync } from '@/context/SyncContext';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { WifiOff, Wifi, AlertCircle } from 'lucide-react';
-import { BottomNav } from '@/components/tablet/BottomNav';
+import { FloatingPOSButton } from '@/components/tablet/FloatingPOSButton';
 import { TopBar } from '@/components/tablet/TopBar';
 import { PwaInstallBanner } from '@/components/shared/PwaInstallBanner';
 import { CommandPalette } from '@/components/shared/CommandPalette';
@@ -67,7 +67,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     : getFailedCount(profile.shop_id || undefined);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       {/* PWA Install Banner */}
       <PwaInstallBanner />
 
@@ -107,12 +107,12 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <main className="container-boxed py-6 pb-24">
+      <main className="container-boxed py-6 pb-8">
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <BottomNav role={profile.role} currentPath={pathname} />
+      {/* Floating POS FAB */}
+      <FloatingPOSButton role={profile.role} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ListChecks, Plus, Edit, Trash2, GripVertical, X, BarChart3, Calendar, Loader2, ArrowLeft, Search, ChevronUp, ChevronDown, User, Clock } from 'lucide-react';
@@ -39,6 +38,7 @@ import {
   type ChecklistStats,
 } from '@/lib/api/checklists-v2';
 import { FieldError, fieldErrorClass, useFormErrors } from '@/components/shared/FieldError';
+import { TodayChecklistProgress } from '@/components/admin/TodayChecklistProgress';
 import { appConfig } from '@/lib/config/app.config';
 
 const s = appConfig.styles;
@@ -156,6 +156,13 @@ export default function ChecklistsManagementPage() {
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [stats, setStats] = useState<ChecklistStats | null>(null);
 
+  // View mode dialog state
+  const [viewDialog, setViewDialog] = useState(false);
+  const [viewingChecklist, setViewingChecklist] = useState<ChecklistWithItems | null>(null);
+
+  // Ref for scrolling to checklists grid after create
+  const checklistsGridRef = useRef<HTMLDivElement>(null);
+
   // Form states
   const [checklistForm, setChecklistForm] = useState({
     name: '',
@@ -213,7 +220,8 @@ export default function ChecklistsManagementPage() {
       name: checklist.name,
       description: checklist.description || '',
       is_active: checklist.is_active,
-      recurrence_type: checklist.recurrence_type,
+      // Normalize 'weekly' to 'daily' since both are now "Repeat"
+      recurrence_type: checklist.recurrence_type === 'once' ? 'once' : 'daily',
       recurrence_days: checklist.recurrence_days,
     });
     setItems(checklist.items.map(item => ({ ...item, id: item.id || `temp-${Date.now()}` })));
@@ -322,6 +330,10 @@ export default function ChecklistsManagementPage() {
 
       setChecklistDialog(false);
       await loadChecklists();
+      // Scroll to checklists grid so the user sees the new/updated checklist
+      setTimeout(() => {
+        checklistsGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (error: any) {
       console.error('Error saving checklist:', error);
       toast.error(error.message || 'Failed to save checklist');
@@ -411,6 +423,11 @@ export default function ChecklistsManagementPage() {
       console.error('Error loading history:', error);
       toast.error('Failed to load history');
     }
+  };
+
+  const handleViewChecklist = (checklist: ChecklistWithItems) => {
+    setViewingChecklist(checklist);
+    setViewDialog(true);
   };
 
   // Build filter chips for active filters
@@ -504,18 +521,18 @@ export default function ChecklistsManagementPage() {
             <p className="text-sm text-muted-foreground">Manage daily and weekly task templates</p>
           </div>
         </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
             <Button
               onClick={handleCreateTodaysInstances}
               variant="outline"
-              className={s.btnAnimation}
+              className={`w-full sm:w-auto ${s.btnAnimation}`}
             >
               <Calendar className="mr-2 h-4 w-4" />
               Create Today
             </Button>
             <Button
               onClick={handleAddChecklist}
-              className={`${s.primaryGradient} ${s.primaryGradientHover} ${s.btnAnimation}`}
+              className={`w-full sm:w-auto ${s.primaryGradient} ${s.primaryGradientHover} ${s.btnAnimation}`}
             >
               <Plus className="mr-2 h-4 w-4" />
               New Checklist
@@ -523,41 +540,58 @@ export default function ChecklistsManagementPage() {
           </div>
       </div>
 
-      {/* Stats Cards - 2x2 mobile, 4 columns desktop */}
-      <StatsCardGrid
-        stats={[
-          {
-            label: 'Total Checklists',
-            value: <CountUp end={checklists.length} />,
-            isActive: filterStatus === 'all',
-            isDefault: true,
-            activeClassName: `${s.statsActive.total.border} ${s.statsActive.total.bg}`,
-            onClick: () => setFilterStatus('all'),
-          },
-          {
-            label: 'Active',
-            value: <CountUp end={activeChecklists.length} />,
-            valueColor: 'text-green-600',
-            isActive: filterStatus === 'active',
-            activeClassName: `${s.statsActive.available.border} ${s.statsActive.available.bg}`,
-            onClick: () => setFilterStatus(filterStatus === 'active' ? 'all' : 'active'),
-          },
-          {
-            label: 'Inactive',
-            value: <CountUp end={inactiveChecklists.length} />,
-            valueColor: 'text-gray-600',
-            isActive: filterStatus === 'inactive',
-            activeClassName: `${s.statsActive.gray.border} ${s.statsActive.gray.bg}`,
-            onClick: () => setFilterStatus(filterStatus === 'inactive' ? 'all' : 'inactive'),
-          },
-          {
-            label: 'Total Items',
-            value: <CountUp end={checklists.reduce((sum, c) => sum + (c.items?.length || 0), 0)} />,
-            valueColor: 'text-blue-600',
-          },
-        ]}
-        filterHint="Click a metric to filter the list below"
-      />
+      {/* ── Desktop: side-by-side stats + live progress | Mobile: stacked ── */}
+      <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
+        {/* Left: Stats Cards — narrow on desktop */}
+        <div className="lg:w-[22%] lg:min-w-[200px] lg:shrink-0">
+          <StatsCardGrid
+            className="lg:!grid-cols-1"
+            stats={[
+              {
+                label: 'Total Checklists',
+                value: <CountUp end={checklists.length} />,
+                isActive: filterStatus === 'all',
+                isDefault: true,
+                activeClassName: `${s.statsActive.total.border} ${s.statsActive.total.bg}`,
+                onClick: () => setFilterStatus('all'),
+              },
+              {
+                label: 'Active',
+                value: <CountUp end={activeChecklists.length} />,
+                valueColor: 'text-green-600',
+                isActive: filterStatus === 'active',
+                activeClassName: `${s.statsActive.available.border} ${s.statsActive.available.bg}`,
+                onClick: () => setFilterStatus(filterStatus === 'active' ? 'all' : 'active'),
+              },
+              {
+                label: 'Inactive',
+                value: <CountUp end={inactiveChecklists.length} />,
+                valueColor: 'text-gray-600',
+                isActive: filterStatus === 'inactive',
+                activeClassName: `${s.statsActive.gray.border} ${s.statsActive.gray.bg}`,
+                onClick: () => setFilterStatus(filterStatus === 'inactive' ? 'all' : 'inactive'),
+              },
+              {
+                label: 'Total Items',
+                value: <CountUp end={checklists.reduce((sum, c) => sum + (c.items?.length || 0), 0)} />,
+                valueColor: 'text-blue-600',
+              },
+            ]}
+            filterHint="Click a metric to filter the list below"
+          />
+        </div>
+
+        {/* Right: Today's Live Progress — wider on desktop with scroll constraint */}
+        <div className="lg:flex-1 lg:min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-1 h-5 rounded-full bg-gradient-to-b ${s.primaryGradientStops}`} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Today&apos;s Progress</h2>
+          </div>
+          <div className="lg:max-h-[340px] lg:overflow-y-auto lg:pr-1 scroll-fade">
+            <TodayChecklistProgress />
+          </div>
+        </div>
+      </div>
 
       {/* Search */}
       <div className="relative">
@@ -577,7 +611,7 @@ export default function ChecklistsManagementPage() {
       />
 
       {/* Checklists List */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div ref={checklistsGridRef} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {checklists
           .filter(checklist => {
             // Filter by status
@@ -598,8 +632,9 @@ export default function ChecklistsManagementPage() {
           .map((checklist, idx) => (
             <Card
               key={checklist.id}
-              className={`group relative overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 animate-stagger-fade-in ${!checklist.is_active ? 'opacity-50 grayscale-[30%]' : ''}`}
+              className={`group relative overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 animate-stagger-fade-in cursor-pointer ${!checklist.is_active ? 'opacity-50 grayscale-[30%]' : ''}`}
               style={{ '--row-index': idx } as React.CSSProperties}
+              onClick={() => handleViewChecklist(checklist)}
             >
               {/* Top gradient accent strip */}
               <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${checklist.is_active ? s.primaryGradientStops : 'from-gray-300 to-gray-400'}`} />
@@ -633,7 +668,7 @@ export default function ChecklistsManagementPage() {
                   <Calendar className="h-3 w-3 shrink-0" />
                   {checklist.recurrence_type === 'once' ? 'One-time' : (
                     <>
-                      {checklist.recurrence_type === 'daily' ? 'Daily' : 'Weekly'}
+                      Repeat
                       {' · '}
                       {checklist.recurrence_days.map(d => dayNames[d]).join(', ')}
                     </>
@@ -667,7 +702,7 @@ export default function ChecklistsManagementPage() {
                     variant="outline"
                     size="sm"
                     className={`flex-1 h-8 text-xs ${a.hoverBg} ${a.hoverBorder} ${s.btnAnimation}`}
-                    onClick={() => handleViewHistory(checklist)}
+                    onClick={(e) => { e.stopPropagation(); handleViewHistory(checklist); }}
                   >
                     <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
                     History
@@ -676,7 +711,7 @@ export default function ChecklistsManagementPage() {
                     variant="outline"
                     size="sm"
                     className={`h-8 w-8 p-0 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 ${s.btnAnimation}`}
-                    onClick={() => handleEditChecklist(checklist)}
+                    onClick={(e) => { e.stopPropagation(); handleEditChecklist(checklist); }}
                   >
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
@@ -684,7 +719,7 @@ export default function ChecklistsManagementPage() {
                     variant="outline"
                     size="sm"
                     className={`h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200 hover:text-red-600 ${s.btnAnimation}`}
-                    onClick={() => handleDeleteChecklist(checklist.id, checklist.name)}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteChecklist(checklist.id, checklist.name); }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -806,8 +841,7 @@ export default function ChecklistsManagementPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="daily">Repeat</SelectItem>
                     <SelectItem value="once">One-time</SelectItem>
                   </SelectContent>
                 </Select>
@@ -925,6 +959,111 @@ export default function ChecklistsManagementPage() {
               ) : (
                 editingChecklist ? 'Save Changes' : 'Create Checklist'
               )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Checklist Dialog (read-only) */}
+      <Dialog open={viewDialog} onOpenChange={setViewDialog}>
+        <DialogContent className="w-[90vw] max-w-lg max-h-[90vh] overflow-y-auto p-0 gap-0">
+          {/* Premium Gradient Header with Edit action */}
+          <div className={`bg-gradient-to-r ${s.primaryGradient} px-6 py-4`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                <ListChecks className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogHeader className="p-0 space-y-0.5 text-left">
+                  <DialogTitle className="text-white text-lg font-bold truncate">
+                    {viewingChecklist?.name}
+                  </DialogTitle>
+                  <DialogDescription className="text-white/80 text-sm truncate">
+                    {viewingChecklist?.description || 'No description'}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-white/80 hover:text-white hover:bg-white/20"
+                onClick={() => {
+                  setViewDialog(false);
+                  if (viewingChecklist) handleEditChecklist(viewingChecklist);
+                }}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {viewingChecklist && (
+            <div className="px-6 py-5 space-y-5">
+              {/* Status & Schedule */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge
+                  className={`text-xs px-2.5 py-0.5 font-medium border ${viewingChecklist.is_active
+                    ? `bg-gradient-to-r ${s.primaryGradientStops} text-white border-transparent`
+                    : 'bg-gray-100 text-gray-500 border-gray-200'}`}
+                >
+                  {viewingChecklist.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+                <div className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${a.bg} ${a.text} font-medium`}>
+                  <Calendar className="h-3 w-3 shrink-0" />
+                  {viewingChecklist.recurrence_type === 'once' ? 'One-time' : (
+                    <>
+                      Repeat · {viewingChecklist.recurrence_days.map(d => dayNames[d]).join(', ')}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-1 h-5 rounded-full bg-gradient-to-b ${s.primaryGradientStops}`} />
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Items ({viewingChecklist.items?.length || 0})
+                  </h3>
+                </div>
+                <div className="space-y-1.5">
+                  {viewingChecklist.items?.map((item, idx) => (
+                    <div key={item.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${a.border} bg-muted/20`}>
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${a.bg} ${a.text} shrink-0`}>
+                        {idx + 1}
+                      </span>
+                      <span className="text-sm">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="px-6 py-3 border-t bg-muted/30 flex justify-between items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className={`text-xs ${a.hoverBg} ${a.hoverBorder} ${s.btnAnimation}`}
+              onClick={() => {
+                setViewDialog(false);
+                if (viewingChecklist) handleViewHistory(viewingChecklist);
+              }}
+            >
+              <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+              View History
+            </Button>
+            <Button
+              size="sm"
+              className={`${s.primaryGradient} ${s.primaryGradientHover} ${s.btnAnimation}`}
+              onClick={() => {
+                setViewDialog(false);
+                if (viewingChecklist) handleEditChecklist(viewingChecklist);
+              }}
+            >
+              <Edit className="mr-1.5 h-3.5 w-3.5" />
+              Edit Checklist
             </Button>
           </div>
         </DialogContent>

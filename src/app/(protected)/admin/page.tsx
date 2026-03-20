@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { appConfig } from '@/lib/config/app.config';
+import { ChecklistProgressBanner } from '@/components/admin/ChecklistProgressBanner';
 import { getCachedStats, setCachedStats } from '@/lib/utils/stats-cache';
 
 const s = appConfig.styles;
@@ -336,6 +337,9 @@ export default function AdminDashboard() {
           },
         ]}
       />
+
+      {/* Today's Checklist Progress */}
+      <ChecklistProgressBanner />
 
       {/* Weekly Insight Banner */}
       {weeklyInsight && (
