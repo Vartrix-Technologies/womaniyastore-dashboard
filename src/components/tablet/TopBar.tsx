@@ -107,14 +107,9 @@ export function TopBar({ profile, shopName }: TopBarProps) {
               />
             </div>
             <div className="flex flex-col">
-              <h1 className={`text-[15px] font-semibold tracking-tight leading-tight ${isDark ? 'text-slate-200' : 'text-foreground'}`}>
-                {appConfig.brand.name}
+              <h1 className={`text-[18px] font-semibold tracking-tight leading-tight ${isDark ? 'text-slate-200' : 'text-foreground'}`}>
+                {shopName || appConfig.brand.name}
               </h1>
-              {shopName && (
-                <p className="text-[11px] text-muted-foreground/70 leading-tight tracking-wide">
-                  {shopName}
-                </p>
-              )}
             </div>
           </button>
 

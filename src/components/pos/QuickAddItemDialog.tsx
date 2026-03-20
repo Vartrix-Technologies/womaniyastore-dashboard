@@ -178,9 +178,9 @@ export function QuickAddItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-hidden !flex !flex-col">
         {/* Header */}
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <div className="flex items-center gap-2">
             <div className={`p-2 rounded-lg ${s.headerIconGradient} text-white`}>
               <Zap className="h-4 w-4" />
@@ -194,7 +194,7 @@ export function QuickAddItemDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-2">
           {/* Category - autocomplete combobox */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -224,7 +224,7 @@ export function QuickAddItemDialog({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent usePortal={false} className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start" collisionPadding={16}>
                   <Command>
                     <CommandInput
                       placeholder="Search or type new..."
@@ -291,7 +291,7 @@ export function QuickAddItemDialog({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent usePortal={false} className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start" collisionPadding={16}>
                 <Command>
                   <CommandInput
                     placeholder="Search or type new..."
@@ -379,7 +379,7 @@ export function QuickAddItemDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-3">
+        <DialogFooter className="gap-2 sm:gap-3 shrink-0">
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
