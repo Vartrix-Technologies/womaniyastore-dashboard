@@ -136,7 +136,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
       const itemName = isManual
         ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
         : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-      const qrCode = isManual ? 'Quick Sale' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
+      const qrCode = isManual ? '' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
       
       const priceHTML = item.original_price !== item.final_price ? `
         <p style="font-size: 0.875rem; color: #6b7280; text-decoration: line-through; margin: 0;">
@@ -181,9 +181,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                 <span style="font-weight: 600;">${index + 1}.</span>
                 <span style="font-weight: 500;">${itemName}</span>
               </div>
-              <p style="font-size: 0.75rem; color: #6b7280; font-family: monospace; margin-left: 20px; margin-top: 4px; margin-bottom: 0;">
-                QR: ${qrCode}
-              </p>
+              ${qrCode ? `<p style="font-size: 0.75rem; color: #6b7280; font-family: monospace; margin-left: 20px; margin-top: 4px; margin-bottom: 0;">QR: ${qrCode}</p>` : ''}
               ${saleTypeBadge}
               ${discountReason}
             </div>
@@ -378,7 +376,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         const itemName = isManual
           ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
           : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-        const qrCode = isManual ? 'Quick Sale' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
+        const qrCode = isManual ? '' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
         const saleIcon = item.sale_type === 'festival' ? '🟢' : item.sale_type === 'clearance' ? '🔴' : item.sale_type === 'promotion' ? '🔵' : '';
         
         return `
@@ -387,7 +385,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
               <div style="flex: 1; font-size: ${fontSize};">
                 <strong>${index + 1}. ${itemName}</strong>
                 ${saleIcon ? `<span style="margin-left: 4px;">${saleIcon}</span>` : ''}
-                <div style="font-size: ${layoutType === 'thermal-80mm' ? '10px' : '9px'}; color: #666; margin-top: 2px;">QR: ${qrCode}</div>
+                ${qrCode ? `<div style="font-size: ${layoutType === 'thermal-80mm' ? '10px' : '9px'}; color: #666; margin-top: 2px;">QR: ${qrCode}</div>` : ''}
               </div>
               <div style="text-align: right; margin-left: 8px; font-size: ${fontSize};">
                 ${item.original_price !== item.final_price ? 
@@ -555,7 +553,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         const itemName = isManual
           ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
           : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-        const qrCode = isManual ? 'Quick Sale' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
+        const qrCode = isManual ? '' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
         
         const priceHTML = item.original_price !== item.final_price ? `
           <p style="font-size: 0.875rem; color: #6b7280; text-decoration: line-through; margin: 0;">
@@ -600,9 +598,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                   <span style="font-weight: 600;">${index + 1}.</span>
                   <span style="font-weight: 500;">${itemName}</span>
                 </div>
-                <p style="font-size: 0.75rem; color: #6b7280; font-family: monospace; margin-left: 20px; margin-top: 4px; margin-bottom: 0;">
-                  QR: ${qrCode}
-                </p>
+                ${qrCode ? `<p style="font-size: 0.75rem; color: #6b7280; font-family: monospace; margin-left: 20px; margin-top: 4px; margin-bottom: 0;">QR: ${qrCode}</p>` : ''}
                 ${saleTypeBadge}
                 ${discountReason}
               </div>
@@ -851,69 +847,207 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
       const displaySale = fullSaleData || sale;
       const billNumber = `${(displaySale as any).bill_prefix || ''}${displaySale.bill_number}`;
       const saleItems = (displaySale as any).sale_items || [];
-      
-      // Build item list for message
-      const itemsList = saleItems.map((item: any, index: number) => {
-        const isManual = !item.inventory_item_id;
-        const itemName = isManual
-          ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
-          : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
-        const price = formatCurrency(item.final_price);
-        return `${index + 1}. ${itemName} - ${price}`;
-      }).join('\n');
 
       // Calculate savings
       const totalSavings = saleItems
         .filter((item: any) => item.original_price !== item.final_price)
         .reduce((sum: number, item: any) => sum + (item.original_price - item.final_price), 0);
 
-      // Build WhatsApp message
-      const message = 
-        `🛍️ *${appConfig.billing.receiptHeader}* - Fashion Forward. Always.\n` +
-        `━━━━━━━━━━━━━━━\n` +
-        `📋 *Invoice:* ${billNumber}\n` +
-        `📅 *Date:* ${formatDate(displaySale.created_at)}\n` +
-        `⏰ *Time:* ${formatTime(displaySale.created_at)}\n` +
-        `━━━━━━━━━━━━━━━\n\n` +
-        `*Items Purchased:*\n${itemsList}\n\n` +
-        `━━━━━━━━━━━━━━━\n` +
-        `📦 *Subtotal:* ${formatCurrency(displaySale.subtotal_amount)}\n` +
-        (displaySale.total_discount > 0 ? `🏷️ *Discount:* -${formatCurrency(displaySale.total_discount)}\n` : '') +
-        (displaySale.total_tax > 0 ? `📊 *GST:* ${formatCurrency(displaySale.total_tax)}\n` : '') +
-        `\n💰 *TOTAL:* ${formatCurrency(displaySale.total_amount)}\n` +
-        `💳 *Paid via:* ${displaySale.payment_method.toUpperCase()}\n` +
-        (totalSavings > 0 ? `\n🎉 *You Saved:* ${formatCurrency(totalSavings)}\n` : '') +
-        `\n━━━━━━━━━━━━━━━\n` +
-        `Thank you for shopping with us! 🙏\n` +
-        `_Visit again for more fashion!_`;
+      // Brief caption to accompany the bill image
+      const caption =
+        `🛍️ *${appConfig.billing.receiptHeader}*\n` +
+        `📋 Invoice: ${billNumber}\n` +
+        `📅 ${formatDate(displaySale.created_at)}\n` +
+        `💰 Total: ${formatCurrency(displaySale.total_amount)}\n` +
+        (totalSavings > 0 ? `🎉 You Saved: ${formatCurrency(totalSavings)}\n` : '') +
+        `\nThank you for shopping with us! 🙏`;
 
-      // Check if Web Share API is available (mobile/PWA)
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: `Invoice ${billNumber} - ${appConfig.brand.name}`,
-            text: message
-          });
-          return; // Success - exit function
-        } catch (shareError: any) {
-          // User cancelled or share failed - fall through to WhatsApp link
-          if (shareError.name === 'AbortError') {
-            return; // User cancelled - don't open WhatsApp link
+      // --- Generate a bill image using an isolated iframe ---
+      // html2canvas cannot handle oklch()/lab() colours that cascade from
+      // Tailwind's global `*` selector. Rendering inside an iframe gives us
+      // a completely isolated document with zero inherited stylesheets.
+      let imageGenerated = false;
+      try {
+        toast.info('Generating bill image…');
+
+        const imgSaleItems = saleItems;
+        const festivalItems = imgSaleItems.filter((item: any) => item.sold_on_sale && item.sale_type === 'festival');
+        const clearanceItems = imgSaleItems.filter((item: any) => item.sold_on_sale && item.sale_type === 'clearance');
+        const promotionItems = imgSaleItems.filter((item: any) => item.sold_on_sale && item.sale_type === 'promotion');
+        const festivalSavings = festivalItems.reduce((sum: number, item: any) => sum + (item.original_price - item.final_price), 0);
+        const clearanceSavings = clearanceItems.reduce((sum: number, item: any) => sum + (item.original_price - item.final_price), 0);
+        const promotionSavings = promotionItems.reduce((sum: number, item: any) => sum + (item.original_price - item.final_price), 0);
+
+        const imgItemsHTML = imgSaleItems.map((item: any, index: number) => {
+          const hasSaleType = item.sold_on_sale && item.sale_type;
+          const stc =
+            item.sale_type === 'festival' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d;' :
+            item.sale_type === 'clearance' ? 'background:#fef2f2;border-color:#fecaca;color:#991b1b;' :
+            item.sale_type === 'promotion' ? 'background:#eff6ff;border-color:#bfdbfe;color:#1e40af;' :
+            'background:#f9fafb;';
+          const isManual = !item.inventory_item_id;
+          const itemName = isManual
+            ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+            : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
+          const qrCode = isManual ? '' : (item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A');
+          const priceHTML = item.original_price !== item.final_price ? `
+            <p style="font-size:0.875rem;color:#6b7280;text-decoration:line-through;margin:0;">${formatCurrency(item.original_price)}</p>
+            <p style="font-size:1.125rem;font-weight:bold;color:#16a34a;margin:0;">${formatCurrency(item.final_price)}</p>
+            <p style="font-size:0.75rem;color:#ea580c;margin:0;">Save ${formatCurrency(item.original_price - item.final_price)}</p>
+          ` : `<p style="font-size:1.125rem;font-weight:600;margin:0;">${formatCurrency(item.final_price)}</p>`;
+          const badge = hasSaleType ? `<div style="margin-left:20px;margin-top:4px;"><span style="font-size:0.75rem;font-weight:600;text-transform:uppercase;padding:2px 8px;border-radius:4px;border:1px solid;${
+            item.sale_type === 'festival' ? 'background:#dcfce7;border-color:#86efac;' :
+            item.sale_type === 'clearance' ? 'background:#fee2e2;border-color:#fca5a5;' :
+            'background:#dbeafe;border-color:#93c5fd;'
+          }">${item.sale_type === 'festival' ? '🟢' : item.sale_type === 'clearance' ? '🔴' : '🔵'} ${item.sale_type}</span></div>` : '';
+          const reason = (item.discount_reason && !isManual) ? `<p style="font-size:0.75rem;color:#ea580c;margin-left:20px;margin-top:4px;">Reason: ${item.discount_reason}</p>` : '';
+          return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:12px;${stc}"><div style="display:flex;justify-content:space-between;align-items:start;"><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-weight:600;">${index + 1}.</span><span style="font-weight:500;">${itemName}</span></div>${qrCode ? `<p style="font-size:0.75rem;color:#6b7280;font-family:monospace;margin-left:20px;margin-top:4px;margin-bottom:0;">QR: ${qrCode}</p>` : ''}${badge}${reason}</div><div style="text-align:right;">${priceHTML}</div></div></div>`;
+        }).join('');
+
+        const imgSavingsHTML = (festivalSavings > 0 || clearanceSavings > 0 || promotionSavings > 0) ? `
+          <div style="background:linear-gradient(to right,#f0fdf4,#ecfeff);border:2px solid #86efac;border-radius:8px;padding:16px;margin-top:16px;">
+            <p style="font-weight:600;color:#15803d;display:flex;align-items:center;gap:8px;margin:0 0 12px 0;"><span style="font-size:1.125rem;">🎉</span> Your Savings</p>
+            ${festivalSavings > 0 ? `<div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:8px;"><span style="color:#16a34a;">Festival Sale</span><span style="font-weight:bold;color:#15803d;">${formatCurrency(festivalSavings)}</span></div>` : ''}
+            ${clearanceSavings > 0 ? `<div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:8px;"><span style="color:#dc2626;">Clearance</span><span style="font-weight:bold;color:#991b1b;">${formatCurrency(clearanceSavings)}</span></div>` : ''}
+            ${promotionSavings > 0 ? `<div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:8px;"><span style="color:#2563eb;">Promotion</span><span style="font-weight:bold;color:#1e40af;">${formatCurrency(promotionSavings)}</span></div>` : ''}
+            <div style="border-top:1px solid #86efac;padding-top:8px;margin-top:8px;"></div>
+            <div style="display:flex;justify-content:space-between;font-weight:bold;"><span>Total Saved</span><span style="color:#15803d;">${formatCurrency(festivalSavings + clearanceSavings + promotionSavings)}</span></div>
+          </div>` : '';
+
+        // Full standalone HTML document — no external CSS, only hex colours
+        const billPageHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box;border-color:#e5e5e5;}</style></head><body style="background:#ffffff;">
+          <div style="font-family:system-ui,-apple-system,sans-serif;width:480px;padding:24px;background:#ffffff;color:#171717;">
+            <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid #e5e7eb;margin-bottom:20px;">
+              <div style="display:flex;justify-content:center;margin-bottom:12px;">
+                <img src="${appConfig.billing.logoPath}" alt="${appConfig.billing.logoAlt}" style="width:96px;height:96px;object-fit:contain;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                <div style="display:none;width:96px;height:96px;background:#000000;border-radius:8px;align-items:center;justify-content:center;"><span style="color:#ffffff;font-size:2rem;font-weight:bold;">${appConfig.brand.logoLetter}</span></div>
+              </div>
+              <h1 style="font-size:1.5rem;font-weight:bold;letter-spacing:0.1em;margin:0 0 4px 0;">${appConfig.billing.receiptHeader}</h1>
+              <p style="font-size:0.8rem;color:#6b7280;font-style:italic;margin:0;">Fashion Forward. Always.</p>
+              ${shopDetails ? `<div style="font-size:0.8rem;color:#6b7280;margin-top:8px;">${shopDetails.address ? `<p style="margin:0;">${shopDetails.address}</p>` : ''}${shopDetails.phone ? `<p style="margin:0;">Phone: ${shopDetails.phone}</p>` : ''}${shopDetails.gst_number ? `<p style="margin:0;">GST: ${shopDetails.gst_number}</p>` : ''}</div>` : ''}
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-radius:8px;margin-bottom:16px;">
+              <div><p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px 0;">Invoice</p><p style="font-family:monospace;font-size:1rem;font-weight:bold;margin:0;">${billNumber}</p></div>
+              <div style="text-align:right;"><p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px 0;">Date & Time</p><p style="font-weight:600;margin:0;font-size:0.875rem;">${formatDate(displaySale.created_at)}</p><p style="font-size:0.8rem;color:#6b7280;margin:0;">${formatTime(displaySale.created_at)}</p></div>
+            </div>
+            ${(displaySale.customer_name || displaySale.customer_phone) ? `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#eff6ff;margin-bottom:16px;"><p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px 0;">Customer</p>${displaySale.customer_name ? `<p style="font-weight:600;margin:0 0 2px 0;">${displaySale.customer_name}</p>` : ''}${displaySale.customer_phone ? `<p style="font-size:0.8rem;color:#6b7280;margin:0;">Phone: ${displaySale.customer_phone}</p>` : ''}</div>` : ''}
+            <div style="margin-bottom:16px;"><p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;padding-bottom:6px;border-bottom:1px solid #e5e7eb;margin:0 0 10px 0;">Items</p>${imgItemsHTML}</div>
+            <div style="border-top:1px solid #e5e7eb;padding-top:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:6px;"><span style="color:#6b7280;">Subtotal</span><span style="font-weight:600;">${formatCurrency(displaySale.subtotal_amount)}</span></div>
+              ${displaySale.total_discount > 0 ? `<div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:6px;"><span style="color:#6b7280;">Discount</span><span style="font-weight:600;color:#ea580c;">-${formatCurrency(displaySale.total_discount)}</span></div>` : ''}
+              ${displaySale.total_tax > 0 ? `<div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:6px;"><span style="color:#6b7280;">GST (${shopDetails?.tax_rate || 5}%)</span><span style="font-weight:600;">${formatCurrency(displaySale.total_tax)}</span></div>` : ''}
+              <div style="border-top:1px solid #e5e7eb;padding-top:10px;margin-top:10px;"></div>
+              <div style="display:flex;justify-content:space-between;font-size:1.25rem;font-weight:bold;"><span>TOTAL</span><span style="color:#16a34a;">${formatCurrency(displaySale.total_amount)}</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;"><span style="font-size:0.8rem;color:#6b7280;">Payment Method</span><span style="font-size:0.8rem;font-weight:600;text-transform:uppercase;padding:3px 10px;background:#f3f4f6;border-radius:6px;">${displaySale.payment_method}</span></div>
+            </div>
+            ${imgSavingsHTML}
+            <div style="text-align:center;padding-top:20px;border-top:1px solid #e5e7eb;margin-top:20px;">
+              <p style="font-weight:600;font-size:1rem;margin:0 0 4px 0;">Thank you for shopping with us!</p>
+              <p style="font-size:0.8rem;color:#6b7280;margin:0;">Visit again. Fashion Forward. Always.</p>
+            </div>
+          </div>
+        </body></html>`;
+
+        // Render inside an iframe so NO parent-page styles can leak in
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '540px';
+        iframe.style.height = '2000px';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+
+        iframe.contentDocument!.open();
+        iframe.contentDocument!.write(billPageHTML);
+        iframe.contentDocument!.close();
+
+        // Wait for iframe content + logo image to load
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const canvas = await html2canvas(iframe.contentDocument!.body.firstElementChild as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 540,
+        });
+
+        document.body.removeChild(iframe);
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((b) => resolve(b), 'image/png', 0.92)
+        );
+
+        if (blob) {
+          const imageFile = new File(
+            [blob],
+            `Invoice_${billNumber}.png`,
+            { type: 'image/png' }
+          );
+
+          // Mobile / PWA: share the image file directly
+          if (navigator.share && navigator.canShare?.({ files: [imageFile] })) {
+            await navigator.share({
+              title: `Invoice ${billNumber} - ${appConfig.brand.name}`,
+              text: caption,
+              files: [imageFile],
+            });
+            imageGenerated = true;
+            return;
           }
+
+          // Desktop: download image + open WhatsApp with text
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `Invoice_${billNumber}.png`;
+          link.click();
+          URL.revokeObjectURL(link.href);
+          toast.success('Bill image downloaded — attach it in WhatsApp!');
+          imageGenerated = true;
         }
+      } catch (imgError) {
+        console.error('Image generation failed, falling back to text:', imgError);
       }
 
-      // Fallback: Open WhatsApp with pre-filled message
-      const encodedMessage = encodeURIComponent(message);
-      const customerPhone = displaySale.customer_phone?.replace(/[^0-9]/g, '');
-      
-      // If we have customer phone, use wa.me with number (for direct chat)
-      // Otherwise use api.whatsapp.com/send (opens WhatsApp to choose recipient)
-      const whatsappUrl = customerPhone 
-        ? `https://wa.me/${customerPhone.startsWith('91') ? customerPhone : '91' + customerPhone}?text=${encodedMessage}`
-        : `https://api.whatsapp.com/send?text=${encodedMessage}`;
-      
-      window.open(whatsappUrl, '_blank');
+      // --- Text-only WhatsApp share (fallback if image failed, or desktop complement) ---
+      if (!imageGenerated) {
+        const itemsList = saleItems.map((item: any, index: number) => {
+          const isManual = !item.inventory_item_id;
+          const itemName = isManual
+            ? `${item.category_name || 'Item'} - ${item.size_name || 'One Size'}`
+            : `${item.inventory_items?.lots?.categories?.name || 'Item'} - ${item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || 'One Size'}`;
+          const price = formatCurrency(item.final_price);
+          return `${index + 1}. ${itemName} - ${price}`;
+        }).join('\n');
+
+        const message =
+          `🛍️ *${appConfig.billing.receiptHeader}* - Fashion Forward. Always.\n` +
+          `━━━━━━━━━━━━━━━\n` +
+          `📋 *Invoice:* ${billNumber}\n` +
+          `📅 *Date:* ${formatDate(displaySale.created_at)}\n` +
+          `⏰ *Time:* ${formatTime(displaySale.created_at)}\n` +
+          `━━━━━━━━━━━━━━━\n\n` +
+          `*Items Purchased:*\n${itemsList}\n\n` +
+          `━━━━━━━━━━━━━━━\n` +
+          `📦 *Subtotal:* ${formatCurrency(displaySale.subtotal_amount)}\n` +
+          (displaySale.total_discount > 0 ? `🏷️ *Discount:* -${formatCurrency(displaySale.total_discount)}\n` : '') +
+          (displaySale.total_tax > 0 ? `📊 *GST:* ${formatCurrency(displaySale.total_tax)}\n` : '') +
+          `\n💰 *TOTAL:* ${formatCurrency(displaySale.total_amount)}\n` +
+          `💳 *Paid via:* ${displaySale.payment_method.toUpperCase()}\n` +
+          (totalSavings > 0 ? `\n🎉 *You Saved:* ${formatCurrency(totalSavings)}\n` : '') +
+          `\n━━━━━━━━━━━━━━━\n` +
+          `Thank you for shopping with us! 🙏\n` +
+          `_Visit again for more fashion!_`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const customerPhone = displaySale.customer_phone?.replace(/[^0-9]/g, '');
+
+        const whatsappUrl = customerPhone
+          ? `https://wa.me/${customerPhone.startsWith('91') ? customerPhone : '91' + customerPhone}?text=${encodedMessage}`
+          : `https://api.whatsapp.com/send?text=${encodedMessage}`;
+
+        window.open(whatsappUrl, '_blank');
+      }
     } catch (error) {
       console.error('Error sharing via WhatsApp:', error);
       toast.error('Failed to share. Please try again.');
@@ -1129,12 +1263,11 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                                 }
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground font-mono ml-5">
-                              {item.inventory_item_id
-                                ? `QR: ${item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A'}`
-                                : <span className="text-amber-600 font-sans font-medium">Quick Sale</span>
-                              }
-                          </p>
+                            {item.inventory_item_id && (
+                              <p className="text-xs text-muted-foreground font-mono ml-5">
+                                QR: {item.inventory_items?.qr_codes?.code || item.qr_code || 'N/A'}
+                              </p>
+                            )}
                           {hasSaleType && (
                             <div className="ml-5 mt-1 flex items-center gap-1">
                               <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded border ${
