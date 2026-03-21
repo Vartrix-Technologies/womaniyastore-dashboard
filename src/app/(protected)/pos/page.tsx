@@ -306,12 +306,12 @@ export default function POSPage() {
                   <Button
                     onClick={() => { initAudio(); setSearchOpen(true); }}
                     variant="outline"
-                    className={`h-auto py-4 flex-col gap-2 ${a.hoverBg} ${a.hoverBorder}`}
+                    className={`h-auto py-3 flex-col gap-1.5 ${a.hoverBg} ${a.hoverBorder}`}
                   >
-                    <Search className={`h-6 w-6 ${s.linkColor}`} />
+                    <Search className={`h-5 w-5 ${s.linkColor}`} />
                     <div className="text-center">
-                      <div className="font-semibold text-base">Search Products</div>
-                      <div className="text-xs text-muted-foreground">Browse inventory</div>
+                      <div className="font-semibold text-sm">Search Products</div>
+                      <div className="text-[10px] text-muted-foreground">Browse inventory</div>
                     </div>
                   </Button>
 
@@ -319,12 +319,12 @@ export default function POSPage() {
                   <Button
                     onClick={() => { initAudio(); setQuickAddOpen(true); }}
                     variant="outline"
-                    className="h-auto py-4 flex-col gap-2 border-dashed border-amber-300 hover:bg-amber-50 hover:border-amber-400"
+                    className="h-auto py-3 flex-col gap-1.5 border-dashed border-amber-300 hover:bg-amber-50 hover:border-amber-400"
                   >
-                    <Zap className="h-6 w-6 text-amber-600" />
+                    <Zap className="h-5 w-5 text-amber-600" />
                     <div className="text-center">
-                      <div className="font-semibold text-base">Quick Add</div>
-                      <div className="text-xs text-muted-foreground">No QR code needed</div>
+                      <div className="font-semibold text-sm">Quick Add</div>
+                      <div className="text-[10px] text-muted-foreground">No QR code needed</div>
                     </div>
                   </Button>
                 </div>

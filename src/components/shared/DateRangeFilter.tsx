@@ -20,7 +20,7 @@ const PRESETS: { value: Exclude<DateFilterType, 'custom'>; label: string }[] = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
-  { value: 'all', label: 'All Time' },
+  { value: 'year', label: 'This Year' },
 ];
 
 // ---------------------------------------------------------------------------

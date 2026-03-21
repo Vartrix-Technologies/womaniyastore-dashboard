@@ -39,10 +39,12 @@ interface SaleForReturn {
   shop_id: string;
   sale_items: {
     id: string;
-    inventory_item_id: string;
+    inventory_item_id: string | null;
     original_price: number;
     final_price: number;
     discount_reason?: string;
+    category_name?: string;
+    size_name?: string;
     inventory_items: {
       id: string;
       status: string;
@@ -52,13 +54,13 @@ interface SaleForReturn {
         sizes: { size_name: string } | null;
         free_text_size?: string;
       };
-    };
+    } | null;
   }[];
 }
 
 interface SelectedItem {
   sale_item_id: string;
-  inventory_item_id: string;
+  inventory_item_id: string | null;
   qr_code: string;
   original_price: number;
   final_price: number;
@@ -138,14 +140,14 @@ export function ProcessReturnDialog({ open, onOpenChange, onSuccess }: ProcessRe
       qr_code: item.inventory_items?.qr_codes?.code || '',
       original_price: item.original_price,
       final_price: item.final_price,
-      category: item.inventory_items?.lots?.categories?.name || 'Unknown',
-      size: item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || '',
+      category: item.inventory_items?.lots?.categories?.name || item.category_name || 'Unknown',
+      size: item.inventory_items?.lots?.sizes?.size_name || item.inventory_items?.lots?.free_text_size || item.size_name || '',
     };
 
     setSelectedItems((prev) => {
-      const exists = prev.find((i) => i.inventory_item_id === item.inventory_item_id);
+      const exists = prev.find((i) => i.sale_item_id === item.id);
       if (exists) {
-        return prev.filter((i) => i.inventory_item_id !== item.inventory_item_id);
+        return prev.filter((i) => i.sale_item_id !== item.id);
       }
       return [...prev, itemData];
     });
@@ -293,14 +295,15 @@ export function ProcessReturnDialog({ open, onOpenChange, onSuccess }: ProcessRe
                 <Label>Select items to return:</Label>
                 <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
                   {selectedSale.sale_items.map((item) => {
-                    const isReturned = alreadyReturnedItems.includes(item.inventory_item_id);
+                    const isReturned = alreadyReturnedItems.includes(item.id);
                     const isSelected = selectedItems.some(
-                      (i) => i.inventory_item_id === item.inventory_item_id
+                      (i) => i.sale_item_id === item.id
                     );
-                    const category = item.inventory_items?.lots?.categories?.name || 'Unknown';
+                    const category = item.inventory_items?.lots?.categories?.name || item.category_name || 'Unknown';
                     const size =
                       item.inventory_items?.lots?.sizes?.size_name ||
                       item.inventory_items?.lots?.free_text_size ||
+                      item.size_name ||
                       '';
                     const qrCode = item.inventory_items?.qr_codes?.code || '';
 

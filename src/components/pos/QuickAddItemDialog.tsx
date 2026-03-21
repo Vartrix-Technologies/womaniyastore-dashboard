@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 import { Zap, Plus, Loader2, Check, ChevronsUpDown, Settings2 } from 'lucide-react';
 import type { CartItem } from '@/types/pos.types';
 import { supabase } from '@/lib/supabase';
@@ -178,9 +178,9 @@ export function QuickAddItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-hidden !flex !flex-col">
+      <DialogContent className="sm:max-w-md">
         {/* Header */}
-        <DialogHeader className="shrink-0">
+        <DialogHeader>
           <div className="flex items-center gap-2">
             <div className={`p-2 rounded-lg ${s.headerIconGradient} text-white`}>
               <Zap className="h-4 w-4" />
@@ -194,7 +194,7 @@ export function QuickAddItemDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-2">
+        <div className="space-y-4 py-2">
           {/* Category - autocomplete combobox */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -212,60 +212,62 @@ export function QuickAddItemDialog({
                 <Loader2 className="h-3 w-3 animate-spin" /> Loading...
               </div>
             ) : (
-              <Popover modal={false} open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={categoryPopoverOpen}
-                    className="w-full justify-between font-normal text-sm"
-                  >
-                    {categoryName || <span className="text-muted-foreground">Select category</span>}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start" collisionPadding={16}>
-                  <Command>
-                    <CommandInput
-                      placeholder="Search or type new..."
-                      value={categorySearch}
-                      onValueChange={setCategorySearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>
-                        {categorySearch.trim() ? (
-                          <button
-                            type="button"
-                            className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
-                            onClick={handleCreateCategory}
-                            disabled={creatingCategory}
-                          >
-                            {creatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                            Create &quot;{categorySearch.trim()}&quot;
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">Type to search or create</span>
-                        )}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {categories.map((c) => (
-                          <CommandItem
-                            key={c.id}
-                            value={c.name}
-                            onSelect={(v) => {
-                              setCategoryName(v);
-                              setCategoryPopoverOpen(false);
-                            }}
-                          >
-                            <Check className={`mr-2 h-4 w-4 ${categoryName === c.name ? 'opacity-100' : 'opacity-0'}`} />
-                            {c.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setCategoryPopoverOpen(true)}
+                  className="w-full justify-between font-normal text-sm"
+                >
+                  {categoryName || <span className="text-muted-foreground">Select category</span>}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                <Dialog open={categoryPopoverOpen} onOpenChange={(v) => { setCategoryPopoverOpen(v); if (!v) setCategorySearch(''); }}>
+                  <DialogContent className="sm:max-w-sm !top-[12%] !translate-y-0">
+                    <DialogHeader>
+                      <DialogTitle className="text-sm font-medium">Select Category</DialogTitle>
+                    </DialogHeader>
+                    <Command>
+                      <CommandInput
+                        placeholder="Search or type new..."
+                        value={categorySearch}
+                        onValueChange={setCategorySearch}
+                      />
+                      <CommandList className="max-h-[50vh]">
+                        <CommandEmpty>
+                          {categorySearch.trim() ? (
+                            <button
+                              type="button"
+                              className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
+                              onClick={handleCreateCategory}
+                              disabled={creatingCategory}
+                            >
+                              {creatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                              Create &quot;{categorySearch.trim()}&quot;
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">Type to search or create</span>
+                          )}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {categories.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={c.name}
+                              onSelect={(v) => {
+                                setCategoryName(v);
+                                setCategoryPopoverOpen(false);
+                              }}
+                            >
+                              <Check className={`mr-2 h-4 w-4 ${categoryName === c.name ? 'opacity-100' : 'opacity-0'}`} />
+                              {c.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
           </div>
 
@@ -279,26 +281,26 @@ export function QuickAddItemDialog({
                 </Link>
               )}
             </div>
-            <Popover modal={false} open={sizePopoverOpen} onOpenChange={setSizePopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={sizePopoverOpen}
-                  className="w-full justify-between font-normal text-sm"
-                >
-                  {sizeName || <span className="text-muted-foreground">Select size (optional)</span>}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start" collisionPadding={16}>
+            <Button
+              variant="outline"
+              onClick={() => setSizePopoverOpen(true)}
+              className="w-full justify-between font-normal text-sm"
+            >
+              {sizeName || <span className="text-muted-foreground">Select size (optional)</span>}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+            <Dialog open={sizePopoverOpen} onOpenChange={(v) => { setSizePopoverOpen(v); if (!v) setSizeSearch(''); }}>
+              <DialogContent className="sm:max-w-sm !top-[12%] !translate-y-0">
+                <DialogHeader>
+                  <DialogTitle className="text-sm font-medium">Select Size</DialogTitle>
+                </DialogHeader>
                 <Command>
                   <CommandInput
                     placeholder="Search or type new..."
                     value={sizeSearch}
                     onValueChange={setSizeSearch}
                   />
-                  <CommandList>
+                  <CommandList className="max-h-[50vh]">
                     <CommandEmpty>
                       {sizeSearch.trim() ? (
                         <button
@@ -331,8 +333,8 @@ export function QuickAddItemDialog({
                     </CommandGroup>
                   </CommandList>
                 </Command>
-              </PopoverContent>
-            </Popover>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Price & Tax */}
@@ -379,7 +381,7 @@ export function QuickAddItemDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-3 shrink-0">
+        <DialogFooter className="gap-2 sm:gap-3">
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>

@@ -50,7 +50,7 @@ export default function QrCodesPage() {
   const [tableLoading, setTableLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const { searchTerm, debouncedSearchTerm, setSearchTerm } = useDebouncedSearch({ delay: 500 });
-  const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: 'all' });
+  const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: 'year' });
   const [filterStatus, setFilterStatus] = useState<QrStatus | 'all'>('all');
   const [filterPrefix, setFilterPrefix] = useState<string>('all');
   const [totalCount, setTotalCount] = useState(0);
@@ -146,7 +146,7 @@ export default function QrCodesPage() {
         if (startDateISO) {
           query = query.gte('created_at', startDateISO);
         }
-        if (dateFilter !== 'all') {
+        if (dateFilter !== 'year') {
           query = query.lte('created_at', endDateISO);
         }
 
@@ -583,7 +583,7 @@ export default function QrCodesPage() {
   const filterChips: FilterChip[] = [];
   if (filterStatus !== 'all') filterChips.push({ label: 'Status', value: filterStatus, onClear: () => { setFilterStatus('all'); setCurrentPage(1); }, className: 'capitalize' });
   if (filterPrefix !== 'all') filterChips.push({ label: 'Prefix', value: filterPrefix, onClear: () => { setFilterPrefix('all'); setCurrentPage(1); }, className: 'font-mono' });
-  if (dateFilter !== 'all' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
+  if (dateFilter !== 'year' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('year'); setCurrentPage(1); }, className: 'capitalize' });
 
   if (initialLoading) {
     return (
@@ -926,7 +926,7 @@ export default function QrCodesPage() {
 
             <FilterChips
               chips={filterChips}
-              onClearAll={() => { setFilterStatus('all'); setFilterPrefix('all'); setDateFilter('all'); setCurrentPage(1); }}
+              onClearAll={() => { setFilterStatus('all'); setFilterPrefix('all'); setDateFilter('year'); setCurrentPage(1); }}
             />
           </div>
         </CardHeader>

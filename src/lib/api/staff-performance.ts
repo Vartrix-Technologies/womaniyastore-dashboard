@@ -71,7 +71,7 @@ export interface StaffPerformanceSummary {
 // DATE HELPERS
 // ==========================================
 
-function getDateRangeFilter(dateRange: 'today' | 'week' | 'month' | 'all', customStart?: string, customEnd?: string) {
+function getDateRangeFilter(dateRange: 'today' | 'week' | 'month' | 'year', customStart?: string, customEnd?: string) {
   const now = new Date();
   let start: string | null = null;
   let end: string | null = null;
@@ -97,11 +97,15 @@ function getDateRangeFilter(dateRange: 'today' | 'week' | 'month' | 'all', custo
       start = monthAgo.toISOString();
       break;
     }
-    case 'all':
-    default:
+    case 'year':
+    default: {
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      yearStart.setHours(0, 0, 0, 0);
+      start = yearStart.toISOString();
       if (customStart) start = customStart;
       if (customEnd) end = customEnd;
       break;
+    }
   }
 
   return { start, end };
@@ -113,7 +117,7 @@ function getDateRangeFilter(dateRange: 'today' | 'week' | 'month' | 'all', custo
 
 export async function getStaffSalesPerformance(
   shopId: string,
-  dateRange: 'today' | 'week' | 'month' | 'all' = 'week',
+  dateRange: 'today' | 'week' | 'month' | 'year' = 'week',
   customStart?: string,
   customEnd?: string,
 ): Promise<StaffSalesPerformance[]> {
@@ -182,7 +186,7 @@ export async function getStaffSalesPerformance(
 
 export async function getStaffChecklistPerformance(
   shopId: string,
-  dateRange: 'today' | 'week' | 'month' | 'all' = 'week',
+  dateRange: 'today' | 'week' | 'month' | 'year' = 'week',
   customStart?: string,
   customEnd?: string,
 ): Promise<StaffChecklistPerformance[]> {
@@ -244,7 +248,7 @@ export async function getStaffChecklistPerformance(
 
 export async function getStaffReturnsPerformance(
   shopId: string,
-  dateRange: 'today' | 'week' | 'month' | 'all' = 'week',
+  dateRange: 'today' | 'week' | 'month' | 'year' = 'week',
   customStart?: string,
   customEnd?: string,
 ): Promise<StaffReturnsPerformance[]> {
@@ -291,7 +295,7 @@ export async function getStaffReturnsPerformance(
 
 export async function getStaffAttendanceSummary(
   shopId: string,
-  dateRange: 'today' | 'week' | 'month' | 'all' = 'week',
+  dateRange: 'today' | 'week' | 'month' | 'year' = 'week',
   customStart?: string,
   customEnd?: string,
 ): Promise<StaffAttendanceSummary[]> {
@@ -362,7 +366,7 @@ export async function getStaffAttendanceSummary(
  */
 export async function getStaffPerformanceSummary(
   shopId: string,
-  dateRange: 'today' | 'week' | 'month' | 'all' = 'week',
+  dateRange: 'today' | 'week' | 'month' | 'year' = 'week',
   customStart?: string,
   customEnd?: string,
 ): Promise<StaffPerformanceSummary[]> {

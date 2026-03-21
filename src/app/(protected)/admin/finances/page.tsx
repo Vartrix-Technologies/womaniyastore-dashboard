@@ -39,6 +39,7 @@ interface FinancialSummary {
   totalExpenses: number;
   netProfit: number;
   salesCount: number;
+  returnsCount: number;
   avgSaleValue: number;
   inventoryValue: number;
 }
@@ -77,6 +78,7 @@ function FinancesPageContent() {
     totalExpenses: 0,
     netProfit: 0,
     salesCount: 0,
+    returnsCount: 0,
     avgSaleValue: 0,
     inventoryValue: 0,
   }));
@@ -234,10 +236,10 @@ function FinancesPageContent() {
         statsTransQuery = statsTransQuery.ilike('description', `%${debouncedSearchTerm}%`);
       }
 
-      // Build returns/refunds query for the same date range
+      // Build returns/refunds query for the same date range (with count)
       let returnsQuery = supabase
         .from('sale_returns')
-        .select('refund_amount')
+        .select('refund_amount', { count: 'exact' })
         .eq('shop_id', profile.shop_id)
         .lte('created_at', toDate);
 
@@ -280,6 +282,7 @@ function FinancesPageContent() {
       const inventoryData = inventoryResult.data;
       const statsTransData = statsTransResult.data;
       const returnsData = returnsResult.data;
+      const returnsCount = returnsResult.count || 0;
 
       // Calculate summary from FULL filtered dataset (using available data)
       const totalRevenue = (salesData as any[] | null)?.reduce((sum: number, sale: any) => sum + (sale.total_amount || 0), 0) || 0;
@@ -287,13 +290,16 @@ function FinancesPageContent() {
       const totalExpenses = (statsTransData as any[] | null)?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0;
       const inventoryValue = (inventoryData as any[] | null)?.reduce((sum: number, item: any) => sum + (item.cost_price || 0), 0) || 0;
       const netRevenue = totalRevenue - totalRefunds;
+      const salesCount = salesData?.length || 0;
+      const effectiveSalesCount = salesCount - returnsCount;
 
       const newSummary = {
         totalRevenue: netRevenue,
         totalExpenses,
         netProfit: netRevenue - totalExpenses,
-        salesCount: salesData?.length || 0,
-        avgSaleValue: salesData && salesData.length > 0 ? netRevenue / salesData.length : 0,
+        salesCount,
+        returnsCount,
+        avgSaleValue: effectiveSalesCount > 0 ? netRevenue / effectiveSalesCount : 0,
         inventoryValue,
       };
       setSummary(newSummary);
@@ -330,7 +336,7 @@ function FinancesPageContent() {
   const handleAddExpense = async () => {
     if (!profile?.shop_id) return;
     const valid = validateExpenseFields({
-      amount: [!expenseForm.amount, 'Amount is required'],
+      amount: [!expenseForm.amount || parseFloat(expenseForm.amount) <= 0, !expenseForm.amount ? 'Amount is required' : 'Amount must be greater than zero'],
       description: [!expenseForm.description, 'Description is required'],
       category_id: [!expenseForm.category_id, 'Please select a category'],
     });
@@ -417,7 +423,7 @@ function FinancesPageContent() {
   const handleEditExpense = async () => {
     if (!editingExpense) return;
     const valid = validateEditFields({
-      amount: [!editForm.amount, 'Amount is required'],
+      amount: [!editForm.amount || parseFloat(editForm.amount) <= 0, !editForm.amount ? 'Amount is required' : 'Amount must be greater than zero'],
       description: [!editForm.description, 'Description is required'],
       category_id: [!editForm.category_id, 'Please select a category'],
     });
@@ -560,7 +566,7 @@ function FinancesPageContent() {
   // Build filter chips for active filters
   const filterChips: FilterChip[] = [];
   if (categoryFilter !== 'all') filterChips.push({ label: 'Category', value: expenseCategories.find(c => c.id === categoryFilter)?.name || categoryFilter, onClear: () => { setCategoryFilter('all'); setCurrentPage(1); } });
-  if (dateFilter !== 'all' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
+  if (dateFilter !== 'year' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('year'); setCurrentPage(1); }, className: 'capitalize' });
   if (debouncedSearchTerm) filterChips.push({ label: 'Search', value: `"${debouncedSearchTerm}"`, onClear: () => { setSearchTerm(''); setCurrentPage(1); } });
 
   return (
@@ -613,7 +619,7 @@ function FinancesPageContent() {
             icon: TrendingUp,
             iconColor: 'text-green-600',
             valueColor: 'text-green-600',
-            subtitle: `${summary.salesCount} sales`,
+            subtitle: `${summary.salesCount} sales · ${summary.returnsCount} returns`,
           },
           {
             label: 'Total Expenses',
@@ -752,7 +758,7 @@ function FinancesPageContent() {
 
               <FilterChips
                 chips={filterChips}
-                onClearAll={() => { setCategoryFilter('all'); setDateFilter('all'); setSearchTerm(''); setCurrentPage(1); }}
+                onClearAll={() => { setCategoryFilter('all'); setDateFilter('year'); setSearchTerm(''); setCurrentPage(1); }}
               />
             </div>
           </CardHeader>

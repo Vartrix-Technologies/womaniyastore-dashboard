@@ -89,7 +89,7 @@ export default function AdminDashboard() {
         lastWeekStart.setDate(thisWeekStart.getDate() - 7);
         const lastWeekEnd = new Date(thisWeekStart); // exclusive
 
-        const [itemsRes, salesRes, turnoverRes, itemsSoldRes, thisWeekRes, lastWeekRes] = await Promise.all([
+        const [itemsRes, salesRes, turnoverRes, itemsSoldRes, thisWeekRes, lastWeekRes, thisWeekReturnsRes, lastWeekReturnsRes] = await Promise.all([
           supabase
             .from('inventory_items')
             .select('*', { count: 'exact', head: true })
@@ -123,6 +123,19 @@ export default function AdminDashboard() {
             .eq('shop_id', shopId)
             .gte('created_at', lastWeekStart.toISOString())
             .lt('created_at', lastWeekEnd.toISOString()),
+          // This week's returns
+          supabase
+            .from('sale_returns')
+            .select('refund_amount')
+            .eq('shop_id', shopId)
+            .gte('created_at', thisWeekStart.toISOString()),
+          // Last week's returns
+          supabase
+            .from('sale_returns')
+            .select('refund_amount')
+            .eq('shop_id', shopId)
+            .gte('created_at', lastWeekStart.toISOString())
+            .lt('created_at', lastWeekEnd.toISOString()),
         ]);
 
         // Only update if we got valid responses (stale-while-revalidate)
@@ -143,14 +156,22 @@ export default function AdminDashboard() {
           console.warn('Some stats queries failed — keeping previous values');
         }
 
-        // Weekly insight calculation
+        // Weekly insight calculation (subtract returns)
         if (!thisWeekRes.error && !lastWeekRes.error) {
-          const thisWeekTotal = (thisWeekRes.data || []).reduce(
+          const thisWeekSales = (thisWeekRes.data || []).reduce(
             (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0), 0
           );
-          const lastWeekTotal = (lastWeekRes.data || []).reduce(
+          const thisWeekRefunds = (thisWeekReturnsRes.data || []).reduce(
+            (sum: number, r: { refund_amount: number }) => sum + (r.refund_amount || 0), 0
+          );
+          const lastWeekSales = (lastWeekRes.data || []).reduce(
             (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0), 0
           );
+          const lastWeekRefunds = (lastWeekReturnsRes.data || []).reduce(
+            (sum: number, r: { refund_amount: number }) => sum + (r.refund_amount || 0), 0
+          );
+          const thisWeekTotal = thisWeekSales - thisWeekRefunds;
+          const lastWeekTotal = lastWeekSales - lastWeekRefunds;
           const pct = lastWeekTotal > 0
             ? ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100
             : thisWeekTotal > 0 ? 100 : 0;

@@ -141,7 +141,7 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
         .order('date_of_stock_arrival', { ascending: false });
 
       if (startDateISO) query = query.gte('date_of_stock_arrival', startDateISO);
-      if (dateFilter !== 'all') query = query.lte('date_of_stock_arrival', endDateISO);
+      if (dateFilter !== 'year') query = query.lte('date_of_stock_arrival', endDateISO);
 
       const { data: lots, error } = await query;
       if (error) throw error;

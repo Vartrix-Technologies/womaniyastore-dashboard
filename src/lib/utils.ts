@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 // Date Range Utilities
 // ============================================================================
 
-export type DateFilterType = 'today' | 'week' | 'month' | 'all' | 'custom';
+export type DateFilterType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 export interface DateRange {
   startDate: Date | null;
@@ -25,7 +25,7 @@ export interface CustomDateRange {
 
 /**
  * Calculate date range based on filter type.
- * Returns startDate as null for 'all' filter (truly unlimited).
+ * Returns startDate as Jan 1 of the current year for 'year' filter.
  * For 'custom', pass the custom from/to dates explicitly.
  */
 export function calculateDateRange(
@@ -57,9 +57,9 @@ export function calculateDateRange(
     case 'month':
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
-    case 'all':
+    case 'year':
     default:
-      startDate = null;
+      startDate = new Date(now.getFullYear(), 0, 1);
       break;
   }
 

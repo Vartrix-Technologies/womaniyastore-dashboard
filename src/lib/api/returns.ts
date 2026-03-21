@@ -4,7 +4,7 @@ import type { SaleReturn } from '@/types';
 
 export interface ReturnedItem {
   sale_item_id: string;
-  inventory_item_id: string;
+  inventory_item_id: string | null;
   qr_code: string;
   original_price: number;
   final_price: number;
@@ -201,6 +201,8 @@ export async function findSaleByBillNumber(billNumber: string, shopId: string) {
         original_price,
         final_price,
         discount_reason,
+        category_name,
+        size_name,
         inventory_items!sale_items_inventory_item_id_fkey (
           id,
           status,
@@ -236,7 +238,8 @@ export async function findSaleByBillNumber(billNumber: string, shopId: string) {
 }
 
 /**
- * Check if any items from a sale have already been returned
+ * Check if any items from a sale have already been returned.
+ * Returns sale_item_ids (not inventory_item_ids) to handle manual items correctly.
  */
 export async function getExistingReturnsForSale(saleId: string): Promise<string[]> {
   const { data, error } = await supabase
@@ -249,20 +252,20 @@ export async function getExistingReturnsForSale(saleId: string): Promise<string[
     throw new Error(error.message);
   }
 
-  // Extract all inventory_item_ids that have been returned
-  const returnedItemIds: string[] = [];
+  // Extract all sale_item_ids that have been returned
+  const returnedSaleItemIds: string[] = [];
   data?.forEach((returnRecord) => {
     const items = returnRecord.returned_items as unknown as ReturnedItem[];
     if (Array.isArray(items)) {
       items.forEach((item) => {
-        if (item.inventory_item_id) {
-          returnedItemIds.push(item.inventory_item_id);
+        if (item.sale_item_id) {
+          returnedSaleItemIds.push(item.sale_item_id);
         }
       });
     }
   });
 
-  return returnedItemIds;
+  return returnedSaleItemIds;
 }
 
 /**
@@ -290,73 +293,65 @@ export async function createReturn(request: CreateReturnRequest): Promise<SaleRe
     throw new Error(returnError.message);
   }
 
-  // 2. Delete old sale_item records for returned items so they can be re-sold
-  //    (sale_items has a unique constraint on inventory_item_id)
-  const inventoryItemIds = request.returned_items.map((item) => item.inventory_item_id);
-  console.log('Cleaning up sale_items for returned inventory:', inventoryItemIds);
+  // 2. Filter to only inventory-linked items (manual/quick-sale items have no inventory_item_id)
+  const inventoryItemIds = request.returned_items
+    .map((item) => item.inventory_item_id)
+    .filter((id): id is string => !!id && id !== 'null');
 
-  const { error: saleItemDeleteError } = await supabase
-    .from('sale_items')
-    .delete()
-    .in('inventory_item_id', inventoryItemIds);
+  if (inventoryItemIds.length > 0) {
+    // Delete old sale_item records for returned items so they can be re-sold
+    console.log('Cleaning up sale_items for returned inventory:', inventoryItemIds);
 
-  if (saleItemDeleteError) {
-    console.warn('Warning: Failed to delete sale_items for returned items:', saleItemDeleteError);
-    // Non-fatal — the complete-sale function has a fallback cleanup
-  }
+    const { error: saleItemDeleteError } = await supabase
+      .from('sale_items')
+      .delete()
+      .in('inventory_item_id', inventoryItemIds);
 
-  // 3. Update inventory items status back to 'available'
-  console.log('Updating inventory items to available:', inventoryItemIds);
-  
-  // First, verify these items exist and check their current status
-  const { data: beforeUpdate, error: checkError } = await supabase
-    .from('inventory_items')
-    .select('id, status, shop_id')
-    .in('id', inventoryItemIds);
-  
-  console.log('Items before update:', beforeUpdate);
-  if (checkError) {
-    console.error('Error checking items:', checkError);
-  }
-  
-  // Perform the update
-  const { data: updatedItems, error: inventoryError } = await supabase
-    .from('inventory_items')
-    .update({ status: 'available', sold_at: null })
-    .in('id', inventoryItemIds)
-    .select('id, status, shop_id');
-
-  if (inventoryError) {
-    console.error('Error updating inventory status:', inventoryError);
-    // Note: Return was created, but inventory update failed
-    throw new Error('Return created but failed to update inventory: ' + inventoryError.message);
-  }
-
-  console.log('Updated inventory items:', updatedItems);
-
-  // Verify the update worked
-  if (!updatedItems || updatedItems.length === 0) {
-    console.warn('Warning: No inventory items were updated. This may be an RLS issue.');
-  } else if (updatedItems.length !== inventoryItemIds.length) {
-    console.warn(`Warning: Only ${updatedItems.length} of ${inventoryItemIds.length} items were updated.`);
-  }
-
-  // 4. Reset QR code status back to 'assigned' so items can be re-scanned
-  const { data: itemsWithQr } = await supabase
-    .from('inventory_items')
-    .select('qr_code_id')
-    .in('id', inventoryItemIds);
-
-  const qrCodeIds = (itemsWithQr || []).map(i => i.qr_code_id).filter(Boolean) as string[];
-  if (qrCodeIds.length > 0) {
-    const { error: qrError } = await supabase
-      .from('qr_codes')
-      .update({ status: 'assigned' })
-      .in('id', qrCodeIds);
-
-    if (qrError) {
-      console.warn('Warning: Failed to reset QR code status:', qrError);
+    if (saleItemDeleteError) {
+      console.warn('Warning: Failed to delete sale_items for returned items:', saleItemDeleteError);
     }
+
+    // 3. Update inventory items status back to 'available'
+    console.log('Updating inventory items to available:', inventoryItemIds);
+    
+    const { data: updatedItems, error: inventoryError } = await supabase
+      .from('inventory_items')
+      .update({ status: 'available', sold_at: null })
+      .in('id', inventoryItemIds)
+      .select('id, status, shop_id');
+
+    if (inventoryError) {
+      console.error('Error updating inventory status:', inventoryError);
+      throw new Error('Return created but failed to update inventory: ' + inventoryError.message);
+    }
+
+    console.log('Updated inventory items:', updatedItems);
+
+    if (!updatedItems || updatedItems.length === 0) {
+      console.warn('Warning: No inventory items were updated. This may be an RLS issue.');
+    } else if (updatedItems.length !== inventoryItemIds.length) {
+      console.warn(`Warning: Only ${updatedItems.length} of ${inventoryItemIds.length} items were updated.`);
+    }
+
+    // 4. Reset QR code status back to 'assigned' so items can be re-scanned
+    const { data: itemsWithQr } = await supabase
+      .from('inventory_items')
+      .select('qr_code_id')
+      .in('id', inventoryItemIds);
+
+    const qrCodeIds = (itemsWithQr || []).map(i => i.qr_code_id).filter(Boolean) as string[];
+    if (qrCodeIds.length > 0) {
+      const { error: qrError } = await supabase
+        .from('qr_codes')
+        .update({ status: 'assigned' })
+        .in('id', qrCodeIds);
+
+      if (qrError) {
+        console.warn('Warning: Failed to reset QR code status:', qrError);
+      }
+    }
+  } else {
+    console.log('No inventory-linked items to update (manual/quick-sale items only)');
   }
 
   return returnData as SaleReturn;

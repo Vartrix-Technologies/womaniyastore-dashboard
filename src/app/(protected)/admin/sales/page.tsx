@@ -155,7 +155,7 @@ function SalesPageContent() {
       if (startDateISO) {
         query = query.gte('created_at', startDateISO);
       }
-      if (dateFilter !== 'all') {
+      if (dateFilter !== 'year') {
         query = query.lte('created_at', endDateISO);
       }
 
@@ -322,7 +322,7 @@ function SalesPageContent() {
   // Build filter chips for active filters
   const filterChips: FilterChip[] = [];
   if (saleTypeFilter !== 'all') filterChips.push({ label: 'Type', value: saleTypeFilter, onClear: () => { setSaleTypeFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
-  if (dateFilter !== 'all' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
+  if (dateFilter !== 'year' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('year'); setCurrentPage(1); }, className: 'capitalize' });
   if (debouncedSearchTerm) filterChips.push({ label: 'Search', value: `"${debouncedSearchTerm}"`, onClear: () => { setSearchTerm(''); setCurrentPage(1); } });
 
   return (
@@ -449,7 +449,7 @@ function SalesPageContent() {
 
               <FilterChips
                 chips={filterChips}
-                onClearAll={() => { setSaleTypeFilter('all'); setDateFilter('all'); setSearchTerm(''); setCurrentPage(1); }}
+                onClearAll={() => { setSaleTypeFilter('all'); setDateFilter('year'); setSearchTerm(''); setCurrentPage(1); }}
               />
             </div>
           </div>

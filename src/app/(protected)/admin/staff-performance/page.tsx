@@ -36,7 +36,7 @@ export default function StaffPerformancePage() {
   }
 
   // Map internal date filter to API date range type
-  const apiDateRange = dateFilter === 'custom' ? 'all' as const : dateFilter as 'today' | 'week' | 'month' | 'all';
+  const apiDateRange = dateFilter === 'custom' ? 'year' as const : dateFilter as 'today' | 'week' | 'month' | 'year';
 
   return (
     <div className="space-y-4 md:space-y-6 animate-content-in">

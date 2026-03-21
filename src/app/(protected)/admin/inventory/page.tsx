@@ -70,7 +70,7 @@ function InventoryPageContent() {
   // Hydrate from URL params
   const initialStatus = searchParams.get('status') || 'all';
   const initialCategory = searchParams.get('category') || 'all';
-  const initialDateFilter = (searchParams.get('date') as DateFilterType) || 'all';
+  const initialDateFilter = (searchParams.get('date') as DateFilterType) || 'year';
   const initialSaleType = searchParams.get('sale_type') || 'all';
 
   const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: initialDateFilter });
@@ -320,7 +320,7 @@ function InventoryPageContent() {
       if (startDateISO) {
         query = query.gte('created_at', startDateISO);
       }
-      if (dateFilter !== 'all') {
+      if (dateFilter !== 'year') {
         query = query.lte('created_at', endDateISO);
       }
 
@@ -406,7 +406,7 @@ function InventoryPageContent() {
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (categoryFilter !== 'all') params.set('category', categoryFilter);
     if (saleTypeFilter !== 'all') params.set('sale_type', saleTypeFilter);
-    if (dateFilter !== 'all') params.set('date', dateFilter);
+    if (dateFilter !== 'year') params.set('date', dateFilter);
     const newUrl = params.toString() ? `?${params.toString()}` : '/admin/inventory';
     router.replace(newUrl, { scroll: false });
   }, [statusFilter, categoryFilter, saleTypeFilter, dateFilter, router]);
@@ -529,7 +529,7 @@ function InventoryPageContent() {
   if (statusFilter !== 'all') filterChips.push({ label: 'Status', value: statusFilter, onClear: () => { setStatusFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
   if (categoryFilter !== 'all') filterChips.push({ label: 'Category', value: categories.find(c => c.id === categoryFilter)?.name || categoryFilter, onClear: () => { setCategoryFilter('all'); setCurrentPage(1); } });
   if (saleTypeFilter !== 'all') filterChips.push({ label: 'Order Type', value: saleTypeFilter === 'normal' ? 'Normal' : saleTypeFilter === 'promotion' ? 'Promotion Sale' : saleTypeFilter === 'festival' ? 'Festival Sale' : saleTypeFilter, onClear: () => { setSaleTypeFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
-  if (dateFilter !== 'all' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
+  if (dateFilter !== 'year' && dateFilter !== 'custom') filterChips.push({ label: 'Date', value: dateFilter, onClear: () => { setDateFilter('year'); setCurrentPage(1); }, className: 'capitalize' });
 
   if (initialLoading) {
     return (
@@ -754,7 +754,7 @@ function InventoryPageContent() {
 
             <FilterChips
               chips={filterChips}
-              onClearAll={() => { setStatusFilter('all'); setCategoryFilter('all'); setSaleTypeFilter('all'); setDateFilter('all'); setCurrentPage(1); }}
+              onClearAll={() => { setStatusFilter('all'); setCategoryFilter('all'); setSaleTypeFilter('all'); setDateFilter('year'); setCurrentPage(1); }}
             />
           </div>
         </CardHeader>
