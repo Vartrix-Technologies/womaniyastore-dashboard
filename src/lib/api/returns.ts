@@ -300,7 +300,6 @@ export async function createReturn(request: CreateReturnRequest): Promise<SaleRe
 
   if (inventoryItemIds.length > 0) {
     // Delete old sale_item records for returned items so they can be re-sold
-    console.log('Cleaning up sale_items for returned inventory:', inventoryItemIds);
 
     const { error: saleItemDeleteError } = await supabase
       .from('sale_items')
@@ -312,7 +311,6 @@ export async function createReturn(request: CreateReturnRequest): Promise<SaleRe
     }
 
     // 3. Update inventory items status back to 'available'
-    console.log('Updating inventory items to available:', inventoryItemIds);
     
     const { data: updatedItems, error: inventoryError } = await supabase
       .from('inventory_items')
@@ -325,12 +323,10 @@ export async function createReturn(request: CreateReturnRequest): Promise<SaleRe
       throw new Error('Return created but failed to update inventory: ' + inventoryError.message);
     }
 
-    console.log('Updated inventory items:', updatedItems);
-
     if (!updatedItems || updatedItems.length === 0) {
-      console.warn('Warning: No inventory items were updated. This may be an RLS issue.');
+      console.warn('No inventory items were updated — possible RLS issue.');
     } else if (updatedItems.length !== inventoryItemIds.length) {
-      console.warn(`Warning: Only ${updatedItems.length} of ${inventoryItemIds.length} items were updated.`);
+      console.warn(`Only ${updatedItems.length} of ${inventoryItemIds.length} items were updated.`);
     }
 
     // 4. Reset QR code status back to 'assigned' so items can be re-scanned
@@ -350,8 +346,6 @@ export async function createReturn(request: CreateReturnRequest): Promise<SaleRe
         console.warn('Warning: Failed to reset QR code status:', qrError);
       }
     }
-  } else {
-    console.log('No inventory-linked items to update (manual/quick-sale items only)');
   }
 
   return returnData as SaleReturn;

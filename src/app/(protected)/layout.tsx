@@ -24,14 +24,10 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   const [shopName, setShopName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    console.log('[ProtectedLayout] auth check', { loading, hasUser: !!user, hasProfile: !!profile, pathname });
     if (loading) return;
     if (!user) {
-      console.log('[ProtectedLayout] No user → /login');
       router.replace('/login');
     } else if (!profile) {
-      // User session exists but profile couldn't load (stale token, RLS error, etc.)
-      console.log('[ProtectedLayout] No profile → /login');
       router.replace('/login');
     }
   }, [user, profile, loading, router, pathname]);

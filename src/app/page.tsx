@@ -19,24 +19,19 @@ export default function RootPage() {
   const hasRedirected = useRef(false);
 
   useEffect(() => {
-    console.log('[RootPage] render', { loading, hasUser: !!user, hasProfile: !!profile });
-
     if (loading) return;
     if (hasRedirected.current) return;
 
     if (!user) {
       hasRedirected.current = true;
-      console.log('[RootPage] No user → /login');
       router.replace('/login');
     } else if (profile) {
       hasRedirected.current = true;
       const dest = getHomeRoute(profile);
-      console.log(`[RootPage] Redirecting to ${dest} (role=${profile.role})`);
       router.replace(dest);
     } else {
       // user exists but profile is null — stale session
       hasRedirected.current = true;
-      console.warn('[RootPage] User session exists but profile null — /login');
       router.replace('/login');
     }
   }, [user, profile, loading, router]);

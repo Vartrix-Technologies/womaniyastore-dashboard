@@ -56,7 +56,7 @@ const a = s.accent;
 
 interface StaffPerformanceProps {
   shopId: string;
-  dateRange?: 'today' | 'week' | 'month' | 'all';
+  dateRange?: 'today' | 'week' | 'month' | 'year';
   customStart?: string | null;
   customEnd?: string | null;
 }

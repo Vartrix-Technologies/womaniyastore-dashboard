@@ -159,16 +159,16 @@ export default function AdminDashboard() {
         // Weekly insight calculation (subtract returns)
         if (!thisWeekRes.error && !lastWeekRes.error) {
           const thisWeekSales = (thisWeekRes.data || []).reduce(
-            (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0), 0
+            (sum: number, s: { total_amount: number | null }) => sum + (s.total_amount || 0), 0
           );
           const thisWeekRefunds = (thisWeekReturnsRes.data || []).reduce(
-            (sum: number, r: { refund_amount: number }) => sum + (r.refund_amount || 0), 0
+            (sum: number, r: { refund_amount: number | null }) => sum + (r.refund_amount || 0), 0
           );
           const lastWeekSales = (lastWeekRes.data || []).reduce(
-            (sum: number, s: { total_amount: number }) => sum + (s.total_amount || 0), 0
+            (sum: number, s: { total_amount: number | null }) => sum + (s.total_amount || 0), 0
           );
           const lastWeekRefunds = (lastWeekReturnsRes.data || []).reduce(
-            (sum: number, r: { refund_amount: number }) => sum + (r.refund_amount || 0), 0
+            (sum: number, r: { refund_amount: number | null }) => sum + (r.refund_amount || 0), 0
           );
           const thisWeekTotal = thisWeekSales - thisWeekRefunds;
           const lastWeekTotal = lastWeekSales - lastWeekRefunds;

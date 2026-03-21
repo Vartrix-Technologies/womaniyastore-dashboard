@@ -8,7 +8,7 @@ import type { Profile, UserRole } from '@/types';
 import { clearAllCachedStats } from '@/lib/utils/stats-cache';
 
 // ── Debug logger ───────────────────────────────────────────────────────
-const DEBUG = true;
+const DEBUG = process.env.NODE_ENV === 'development';
 function authLog(action: string, ...args: unknown[]) {
   if (!DEBUG) return;
   const ts = new Date().toISOString().slice(11, 23);

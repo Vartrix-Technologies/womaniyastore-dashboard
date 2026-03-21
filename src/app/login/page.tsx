@@ -45,7 +45,6 @@ export default function LoginPage() {
     if (user && profile) {
       hasRedirected.current = true;
       const dest = getHomeRoute(profile);
-      console.log(`[Login] Already authenticated → navigating to ${dest}`);
       router.replace(dest);
     }
   }, [user, profile, authLoading, router]);
@@ -60,7 +59,6 @@ export default function LoginPage() {
     if (!valid) return;
 
     setLoading(true);
-    console.log('[Login] signIn:start');
 
     try {
       // signIn() now returns the profile AND sets AuthContext state eagerly.
@@ -69,7 +67,6 @@ export default function LoginPage() {
       localStorage.setItem(LAST_EMAIL_KEY, email); // Remember for next login
 
       const dest = getHomeRoute(userProfile);
-      console.log(`[Login] signIn:ok → navigating directly to ${dest}`);
       toast.success('Welcome back!');
       hasRedirected.current = true;
       router.replace(dest);
