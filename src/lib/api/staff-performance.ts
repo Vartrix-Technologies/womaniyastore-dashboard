@@ -84,10 +84,11 @@ function getDateRangeFilter(dateRange: 'today' | 'week' | 'month' | 'year', cust
       break;
     }
     case 'week': {
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      weekAgo.setHours(0, 0, 0, 0);
-      start = weekAgo.toISOString();
+      const day = now.getDay(); // 0 (Sun) – 6 (Sat)
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+      monday.setHours(0, 0, 0, 0);
+      start = monday.toISOString();
       break;
     }
     case 'month': {

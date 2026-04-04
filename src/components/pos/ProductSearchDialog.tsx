@@ -510,7 +510,7 @@ export function ProductSearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="w-[90vw] sm:max-w-2xl max-h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Premium Header */}
         <div className={`bg-gradient-to-r ${s.primaryGradient} px-6 py-4 flex-shrink-0`}>
           <div className="flex items-center gap-3">

@@ -51,9 +51,13 @@ export function calculateDateRange(
     case 'today':
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       break;
-    case 'week':
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case 'week': {
+      // Start from the most recent Monday (day 0 = Sun, 1 = Mon ... 6 = Sat)
+      const day = now.getDay(); // 0 (Sun) – 6 (Sat)
+      const diffToMonday = day === 0 ? 6 : day - 1; // days since last Monday
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
       break;
+    }
     case 'month':
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
