@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -512,25 +511,20 @@ export function ProductSearchDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] sm:max-w-2xl max-h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Premium Header */}
-        <div className={`bg-gradient-to-r ${s.primaryGradient} px-6 py-4 flex-shrink-0`}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+        <div className={`bg-gradient-to-r ${s.primaryGradient} px-4 py-2.5 flex-shrink-0`}>
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
               {manualEntry ? (
-                <Keyboard className="h-5 w-5 text-white" />
+                <Keyboard className="h-4 w-4 text-white" />
               ) : (
-                <Search className="h-5 w-5 text-white" />
+                <Search className="h-4 w-4 text-white" />
               )}
             </div>
-            <div>
-              <DialogHeader className="p-0 space-y-0.5 text-left">
-                <DialogTitle className="text-white text-lg font-bold">
-                  {manualEntry ? 'Enter Product Code' : 'Search Products'}
-                </DialogTitle>
-                <DialogDescription className="text-white/80 text-sm">
-                  {manualEntry ? 'Type or paste the QR code' : 'Find items by code, category, or size'}
-                </DialogDescription>
-              </DialogHeader>
-            </div>
+            <DialogHeader className="p-0 space-y-0 text-left">
+              <DialogTitle className="text-white text-base font-bold">
+                {manualEntry ? 'Enter Product Code' : 'Search Products'}
+              </DialogTitle>
+            </DialogHeader>
           </div>
         </div>
 
@@ -582,7 +576,7 @@ export function ProductSearchDialog({
           </div>
         ) : (
           <>
-            <div className="px-6 pt-4 pb-3 space-y-2.5 flex-shrink-0">
+            <div className="px-4 pt-3 pb-2 space-y-2 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -705,18 +699,10 @@ export function ProductSearchDialog({
                 </div>
               )}
 
-              <Button
-                variant="outline"
-                onClick={() => setManualEntry(true)}
-                className={`w-full h-9 text-xs border-dashed border-border/60 ${a.hoverBg} ${a.hoverBorder}`}
-              >
-                <Keyboard className="mr-2 h-3.5 w-3.5" />
-                Enter Product Code Manually
-              </Button>
             </div>
 
-            <div className="overflow-hidden flex-1">
-              <ScrollArea className="h-[45vh] md:h-[50vh] px-6 pb-4">
+            <div className="min-h-0 flex-1">
+              <ScrollArea className="h-full px-4 pb-4">
                 {loading && (
                   <div className="flex flex-col items-center justify-center py-16">
                     <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-brand-200 border-t-brand-600" />
@@ -758,7 +744,7 @@ export function ProductSearchDialog({
                     <div className="text-xs text-muted-foreground font-medium px-1 mb-2">
                       {results.length} product{results.length !== 1 ? 's' : ''} found
                     </div>
-                    {results.map((result, index) => {
+                    {results.map((result) => {
                       const lot = result.lot;
                       const categoryName = lot.category?.name || 'Unknown';
                       const sizeName = lot.size?.size_name || lot.free_text_size || 'N/A';
@@ -768,7 +754,7 @@ export function ProductSearchDialog({
                       return (
                         <div
                           key={result.id}
-                          className={`group flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 ${
+                          className={`group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 ${
                             isInCart 
                               ? `${a.bg} border-2 ${a.border}` 
                               : `border-border/50 hover:border-border hover:shadow-sm hover:bg-muted/30 ${
@@ -778,13 +764,6 @@ export function ProductSearchDialog({
                                 }`
                           }`}
                         >
-                          {/* Number indicator */}
-                          <div className={`flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold mr-3 flex-shrink-0 ${
-                            isInCart ? `${a.bgMuted} ${a.text}` : 'bg-muted/60 text-muted-foreground'
-                          }`}>
-                            {index + 1}
-                          </div>
-
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className="font-semibold text-sm text-foreground truncate">

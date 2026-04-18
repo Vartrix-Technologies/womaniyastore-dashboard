@@ -143,10 +143,10 @@ export function QrCodeDownloadDialog({
   title = 'Print / Download QR Codes',
 }: QrCodeDownloadDialogProps) {
   // ── Source tab state
-  const [sourceMode, setSourceMode] = useState<SourceMode>('passed');
+  const [sourceMode, setSourceMode] = useState<SourceMode>('custom');
   const [customPrefix, setCustomPrefix] = useState('');
-  const [customStart, setCustomStart] = useState(1);
-  const [customCount, setCustomCount] = useState(100);
+  const [customStart, setCustomStart] = useState<number | ''>('');
+  const [customCount, setCustomCount] = useState<number | ''>('');
   const [prefixPopoverOpen, setPrefixPopoverOpen] = useState(false);
 
   // ── Layout tab state
@@ -165,7 +165,7 @@ export function QrCodeDownloadDialog({
   const [badgePresetIdx, setBadgePresetIdx] = useState(0);
 
   // ── Output
-  const [outputFormat, setOutputFormat] = useState<OutputFormat>('pdf');
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>('zip');
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -181,9 +181,11 @@ export function QrCodeDownloadDialog({
   const finalCodes = useMemo(() => {
     if (sourceMode === 'passed') return codes;
     if (!customPrefix) return [];
+    const start = typeof customStart === 'number' ? customStart : 1;
+    const count = typeof customCount === 'number' ? customCount : 0;
     const result: string[] = [];
-    for (let i = 0; i < customCount; i++) {
-      const num = customStart + i;
+    for (let i = 0; i < count; i++) {
+      const num = start + i;
       result.push(`${customPrefix}-${String(num).padStart(4, '0')}`);
     }
     return result;
@@ -296,7 +298,7 @@ export function QrCodeDownloadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] !flex !flex-col !gap-0 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] !flex !flex-col !gap-0 p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <QrCodeIcon className={`h-5 w-5 ${a.textMuted}`} />
@@ -332,43 +334,9 @@ export function QrCodeDownloadDialog({
 
             {/* ━━━━━━━━ SOURCE ━━━━━━━━ */}
             <TabsContent value="source" className="space-y-4 pb-4">
-              {/* Source mode toggle */}
+              {/* Custom range config — always shown */}
               <div className="space-y-3">
-                <Label className="font-semibold">Code Source</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSourceMode('passed')}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      sourceMode === 'passed'
-                        ? `${a.borderStrong} ${a.bg} ${a.bgDarkSolid}`
-                        : 'border-muted hover:border-muted-foreground/30'
-                    }`}
-                  >
-                    <div className="font-medium text-sm">Current Selection</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Use {codes.length} code(s) from the table
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSourceMode('custom')}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      sourceMode === 'custom'
-                        ? `${a.borderStrong} ${a.bg} ${a.bgDarkSolid}`
-                        : 'border-muted hover:border-muted-foreground/30'
-                    }`}
-                  >
-                    <div className="font-medium text-sm">Custom Range</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Choose prefix &amp; range
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Custom range config */}
-              {sourceMode === 'custom' && (
+                <Label className="font-semibold">Custom Range</Label>
                 <div className="space-y-3 p-3 rounded-lg bg-muted/50">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Prefix</Label>
@@ -442,7 +410,11 @@ export function QrCodeDownloadDialog({
                         min={1}
                         max={9999}
                         value={customStart}
-                        onChange={(e) => setCustomStart(Math.max(1, parseInt(e.target.value) || 1))}
+                        placeholder="e.g. 1"
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCustomStart(v === '' ? '' : Math.max(1, parseInt(v) || 1));
+                        }}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -452,12 +424,16 @@ export function QrCodeDownloadDialog({
                         min={1}
                         max={9999}
                         value={customCount}
-                        onChange={(e) => setCustomCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        placeholder="e.g. 100"
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCustomCount(v === '' ? '' : Math.max(1, parseInt(v) || 1));
+                        }}
                       />
                     </div>
                   </div>
 
-                  {customPrefix && (
+                  {customPrefix && typeof customStart === 'number' && typeof customCount === 'number' && customCount > 0 && (
                     <p className="text-xs text-muted-foreground">
                       Range:{' '}
                       <span className="font-mono font-semibold">
@@ -470,45 +446,12 @@ export function QrCodeDownloadDialog({
                     </p>
                   )}
                 </div>
-              )}
+              </div>
             </TabsContent>
 
             {/* ━━━━━━━━ LAYOUT ━━━━━━━━ */}
             <TabsContent value="layout" className="space-y-4 pb-4">
-              {/* Output format */}
-              <div className="space-y-2">
-                <Label className="font-semibold">Output Format</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setOutputFormat('pdf')}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      outputFormat === 'pdf'
-                        ? `${a.borderStrong} ${a.bg} ${a.bgDarkSolid}`
-                        : 'border-muted hover:border-muted-foreground/30'
-                    }`}
-                  >
-                    <Printer className="h-4 w-4 mb-1" />
-                    <div className="font-medium text-sm">Print Sheet (PDF)</div>
-                    <div className="text-xs text-muted-foreground">Grid layout on paper</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOutputFormat('zip')}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      outputFormat === 'zip'
-                        ? `${a.borderStrong} ${a.bg} ${a.bgDarkSolid}`
-                        : 'border-muted hover:border-muted-foreground/30'
-                    }`}
-                  >
-                    <FileImage className="h-4 w-4 mb-1" />
-                    <div className="font-medium text-sm">Images (ZIP)</div>
-                    <div className="text-xs text-muted-foreground">One PNG per code in a ZIP</div>
-                  </button>
-                </div>
-              </div>
-
-              {/* PDF layout settings */}
+              {/* PDF layout settings — available but not the default path */}
               {outputFormat === 'pdf' && (
                 <>
                   {/* Paper size */}
@@ -1057,6 +1000,7 @@ export function QrCodeDownloadDialog({
           {activeTab !== 'preview' ? (
             <Button
               onClick={handleNext}
+              disabled={activeTab === 'source' && (typeof customStart !== 'number' || typeof customCount !== 'number' || customCount < 1)}
               className={`${s.primaryGradient} ${s.primaryGradientHover} text-white`}
             >
               Next

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -60,40 +60,34 @@ export function PickerDialog({
   initialSearchValue = '',
 }: PickerDialogProps) {
   const [search, setSearch] = useState('');
-  const closedByPopRef = useRef(false);
 
   // Reset search when dialog opens
   useEffect(() => {
-    if (open) {
-      setSearch(initialSearchValue);
-      closedByPopRef.current = false;
-    }
+    if (open) setSearch(initialSearchValue);
   }, [open, initialSearchValue]);
 
-  // History API back-button interception.
-  // Uses a unique state key so parent dialogs (which also use popstate) can
-  // distinguish their own entries from ours and avoid closing prematurely.
+  // Back-button interception via URL hash (not history state).
+  // URL hashes are not intercepted by Next.js App Router, so they don't
+  // cause the router to navigate away and close any parent Sheets/dialogs.
   useEffect(() => {
     if (!open) return;
 
-    const stateKey = `picker-${Math.random().toString(36).slice(2)}`;
-    history.pushState({ overlay: stateKey }, '');
+    const hashId = `picker-${Math.random().toString(36).slice(2)}`;
+    const originalHref = window.location.href;
+    history.pushState(history.state, '', `${window.location.pathname}${window.location.search}#${hashId}`);
 
-    const onPopState = (e: PopStateEvent) => {
-      // Only close if we navigated AWAY from our entry
-      if (e.state?.overlay === stateKey) return;
-      closedByPopRef.current = true;
+    const onPopState = () => {
+      if (window.location.hash === `#${hashId}`) return;
       onOpenChange(false);
     };
 
     window.addEventListener('popstate', onPopState);
     return () => {
       window.removeEventListener('popstate', onPopState);
-      // If the parent closed us directly (e.g. after a create callback) the
-      // history entry still exists. Pop it so the user doesn't get a stale
-      // back-button step.
-      if (!closedByPopRef.current) {
-        history.back();
+      // If the parent closed us directly (e.g. after a create callback),
+      // restore the URL without adding a new history step.
+      if (window.location.hash === `#${hashId}`) {
+        history.replaceState(history.state, '', originalHref);
       }
     };
   }, [open, onOpenChange]);

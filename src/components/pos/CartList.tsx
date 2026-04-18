@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Percent } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import type { CartItem } from '@/types/pos.types';
 import type { InventoryItemForList } from '@/types';
@@ -296,19 +296,42 @@ export function CartList({
 
                   {/* Discount */}
                   <td className="py-4 px-4">
-                    {hasDiscount ? (
-                      <div className="space-y-1">
-                        <Badge variant="secondary" className="flex items-center gap-1 w-fit shadow-sm border border-border/40 font-semibold">
-                          <Percent className="h-3 w-3" />
-                          {discountPercent.toFixed(1)}%
-                        </Badge>
+                    <div className="space-y-1">
+                      <Select
+                        value={(() => {
+                          if (!hasDiscount) return 'none';
+                          const matched = [5, 10, 15, 20].find(p => Math.abs(p - discountPercent) < 0.5);
+                          return matched ? String(matched) : 'custom';
+                        })()}
+                        onValueChange={(value) => {
+                          if (value === 'custom') return;
+                          const newPrice = value === 'none'
+                            ? item.originalPrice
+                            : Math.round(item.originalPrice * (1 - parseInt(value) / 100));
+                          setEditingPrice(prev => ({ ...prev, [item.qrCode]: newPrice }));
+                          handlePriceBlur(item, newPrice);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[110px] px-2.5 border-border/60 shadow-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">No discount</SelectItem>
+                          {hasDiscount && ![5, 10, 15, 20].some(p => Math.abs(p - discountPercent) < 0.5) && (
+                            <SelectItem value="custom" className="text-xs">{discountPercent.toFixed(1)}% (custom)</SelectItem>
+                          )}
+                          <SelectItem value="5" className="text-xs">5%</SelectItem>
+                          <SelectItem value="10" className="text-xs">10%</SelectItem>
+                          <SelectItem value="15" className="text-xs">15%</SelectItem>
+                          <SelectItem value="20" className="text-xs">20%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {hasDiscount && (
                         <div className="text-[11px] text-muted-foreground/80 font-medium">
                           -{formatCurrency(discountAmount)}
                         </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground/40">—</span>
-                    )}
+                      )}
+                    </div>
                   </td>
 
                   {/* Discount Reason */}

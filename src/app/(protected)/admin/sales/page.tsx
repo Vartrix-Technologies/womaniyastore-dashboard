@@ -514,26 +514,20 @@ function SalesPageContent() {
                       : '';
                     
                     return (
-                      <tr key={sale.id} className={`border-b hover:bg-muted/50 transition-colors animate-stagger-fade-in ${rowTint}`} style={{ '--row-index': idx } as React.CSSProperties}>
+                      <tr key={sale.id} className={`border-b hover:bg-muted/50 transition-colors animate-stagger-fade-in cursor-pointer ${rowTint}`} style={{ '--row-index': idx } as React.CSSProperties} onClick={() => setViewingSale(sale)}>
                         <td className="py-3 px-3">
-                          <button
-                            onClick={() => setViewingSale(sale)}
-                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                            title="View bill details"
-                          >
-                            <Badge variant="outline" className={`font-mono ${s.accent.hoverBg} ${s.accent.hoverBorder}`}>
-                              <span className="flex items-center gap-2">
-                                {billNumber}
-                                {(hasFestival || hasClearance || hasPromotion) && (
-                                  <span className="flex items-center gap-1">
-                                    {hasFestival && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Festival sale"></span>}
-                                    {hasClearance && <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="Clearance"></span>}
-                                    {hasPromotion && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Promotion"></span>}
-                                  </span>
-                                )}
-                              </span>
-                            </Badge>
-                          </button>
+                          <Badge variant="outline" className={`font-mono ${s.accent.hoverBg} ${s.accent.hoverBorder}`}>
+                            <span className="flex items-center gap-2">
+                              {billNumber}
+                              {(hasFestival || hasClearance || hasPromotion) && (
+                                <span className="flex items-center gap-1">
+                                  {hasFestival && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Festival sale"></span>}
+                                  {hasClearance && <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="Clearance"></span>}
+                                  {hasPromotion && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Promotion"></span>}
+                                </span>
+                              )}
+                            </span>
+                          </Badge>
                         </td>
                         <td className="py-3 px-3 text-sm">
                           <div className="flex items-center gap-1">
@@ -581,7 +575,7 @@ function SalesPageContent() {
                             size="sm"
                             className="hover:bg-muted dark:hover:bg-muted"
                             title="View bill details"
-                            onClick={() => setViewingSale(sale)}
+                            onClick={(e) => { e.stopPropagation(); setViewingSale(sale); }}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

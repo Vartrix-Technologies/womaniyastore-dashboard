@@ -11,7 +11,7 @@ import { DateRangeFilter } from '@/components/shared/DateRangeFilter';
 import {
   History, Download, RefreshCw, Package, Loader2,
   ChevronRight, ChevronDown, Pencil, Eye, Layers,
-  Calendar, Tag, IndianRupee,
+  Calendar, Tag, IndianRupee, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useDateFilter } from '@/hooks';
@@ -22,6 +22,11 @@ import { toast } from 'sonner';
 import { EditLotDialog } from '@/components/shared/EditLotDialog';
 import { EditInventoryItemDialog } from '@/components/shared/EditInventoryItemDialog';
 import { InventoryItemDetailsDialog } from '@/components/shared/InventoryItemDetailsDialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { InventoryItemForList, Category, Size } from '@/types';
 
 const s = appConfig.styles;
@@ -96,6 +101,10 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
 
   // View item details state
   const [viewingItem, setViewingItem] = useState<InventoryItemForList | null>(null);
+
+  // Delete confirmation state
+  const [deletingLot, setDeletingLot] = useState<LotEntry | null>(null);
+  const [deletingItem, setDeletingItem] = useState<InventoryItemForList | null>(null);
 
   const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: 'month' });
 
@@ -314,7 +323,59 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
     fetchLotsHistory();
     onDataChanged?.();
   };
+  // Open edit item dialog from the item details popup
+  const handleEditItemFromDetails = (item: InventoryItemForList) => {
+    // Find the lot that owns this item so EditInventoryItemDialog has full context
+    let ownerLot: LotItem | null = null;
+    let ownerLotEntry: LotEntry | null = null;
+    for (const group of dateGroups) {
+      for (const lot of group.lots) {
+        const found = lot.items.find(i => i.id === item.id);
+        if (found) { ownerLot = found; ownerLotEntry = lot; break; }
+      }
+      if (ownerLotEntry) break;
+    }
+    setViewingItem(null);
+    if (ownerLot && ownerLotEntry) {
+      setEditingItem(ownerLot);
+      setEditingItemLot(ownerLotEntry);
+    }
+  };
 
+  // ── Delete handlers ──────────────────────────────────────────────
+
+  const handleConfirmDeleteLot = async () => {
+    if (!deletingLot) return;
+    const { error: itemsError } = await supabase
+      .from('inventory_items')
+      .delete()
+      .eq('lot_id', deletingLot.id);
+    if (itemsError) { toast.error('Failed to delete lot items'); return; }
+    const { error: lotError } = await supabase
+      .from('lots')
+      .delete()
+      .eq('id', deletingLot.id);
+    if (lotError) { toast.error('Failed to delete lot'); return; }
+    toast.success(`Lot deleted — ${deletingLot.items.length} items removed`);
+    setDeletingLot(null);
+    fetchLotsHistory();
+    onDataChanged?.();
+  };
+
+  const handleConfirmDeleteItem = async () => {
+    if (!deletingItem) return;
+    const { error } = await supabase
+      .from('inventory_items')
+      .delete()
+      .eq('id', deletingItem.id)
+      .neq('status', 'sold');
+    if (error) { toast.error('Failed to delete item'); return; }
+    toast.success('Item deleted');
+    setDeletingItem(null);
+    setViewingItem(null);
+    fetchLotsHistory();
+    onDataChanged?.();
+  };
   // ── Status badge helper ──────────────────────────────────────────────────
 
   const statusBadge = (status: string) => {
@@ -340,10 +401,22 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
     return <Badge variant="outline" className={`text-[10px] font-semibold ${cfg.className}`}>{cfg.label}</Badge>;
   };
 
+  // When a child Dialog/AlertDialog is open on top of the Sheet, Radix fires
+  // "interact outside" on the Sheet when the child closes.  Prevent that from
+  // dismissing the Sheet.
+  const hasChildDialogOpen = !!(editingLot || editingItem || viewingItem || deletingLot || deletingItem);
+  const blockSheetDismiss = (e: Event) => { if (hasChildDialogOpen) e.preventDefault(); };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-[calc(100%-2.5rem)] sm:max-w-lg flex flex-col p-0 gap-0 rounded-l-xl sm:rounded-none">
+        <SheetContent
+          side="right"
+          className="w-[calc(100%-2.5rem)] sm:max-w-lg flex flex-col p-0 gap-0 rounded-l-xl sm:rounded-none"
+          onInteractOutside={blockSheetDismiss}
+          onPointerDownOutside={blockSheetDismiss}
+          onFocusOutside={blockSheetDismiss}
+        >
           {/* ── Header ── */}
           <SheetHeader className="px-5 pt-5 pb-3 shrink-0">
             <div className="flex items-center gap-2.5">
@@ -475,10 +548,10 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
                                 style={{ animationDelay: `${lotIdx * 20}ms` }}
                               >
                                 {/* Lot header row */}
-                                <div className="flex items-center">
+                                <div className="flex items-center min-w-0">
                                   <button
                                     onClick={() => toggleLot(lot.id)}
-                                    className={`flex-1 flex items-center gap-2 pl-8 pr-3 py-2.5 text-left transition-all hover:bg-muted/30 ${
+                                    className={`flex-1 min-w-0 flex items-center gap-2 pl-8 pr-2 py-2.5 text-left transition-all hover:bg-muted/30 ${
                                       isLotExpanded ? 'bg-muted/20' : ''
                                     }`}
                                   >
@@ -507,21 +580,37 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
                                     </Badge>
                                   </button>
 
-                                  {/* Edit lot button — only when there are available items */}
-                                  {lot.availableCount > 0 && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 shrink-0 mr-2 hover:text-brand-600"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingLot(lot);
-                                      }}
-                                      title="Edit entire lot"
-                                    >
-                                      <Pencil className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )}
+                                  {/* Edit + Delete lot buttons */}
+                                  <div className="flex shrink-0 items-center gap-0.5 pr-2">
+                                    {lot.availableCount > 0 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 hover:text-brand-600"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingLot(lot);
+                                        }}
+                                        title="Edit entire lot"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                    {lot.soldCount === 0 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeletingLot(lot);
+                                        }}
+                                        title="Delete lot"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
 
                                 {/* ── Level 3: Items under this lot ── */}
@@ -674,7 +763,53 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
       <InventoryItemDetailsDialog
         item={viewingItem}
         onClose={() => setViewingItem(null)}
+        onEdit={handleEditItemFromDetails}
+        onDelete={(item) => setDeletingItem(item)}
       />
+
+      {/* ── Delete Lot Confirmation ── */}
+      <AlertDialog open={!!deletingLot} onOpenChange={(open) => !open && setDeletingLot(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete lot?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this lot and all {deletingLot?.items.length ?? 0} item{(deletingLot?.items.length ?? 0) !== 1 ? 's' : ''} in it.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteLot}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Delete Item Confirmation ── */}
+      <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete item{deletingItem?.qr_codes?.code ? ` ${deletingItem.qr_codes.code}` : ''}.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteItem}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -174,29 +174,33 @@ export function QuickAddItemDialog({
   };
 
   // ── Back-button interception via history API ──
-  // Push a history entry when the dialog opens. Uses a stable key so
-  // PickerDialog popstate handlers (which push their own entries) don't
-  // accidentally close this parent dialog.
+  // Push a hash entry when the dialog opens so the hardware back button closes
+  // the dialog instead of navigating away. Using a URL hash (not state object)
+  // means Next.js App Router doesn't intercept the navigation and close parent
+  // Sheets/dialogs.
   useEffect(() => {
     if (!open) return;
 
-    history.pushState({ overlay: 'quick-add-dialog' }, '');
+    const originalHref = window.location.href;
+    const hashId = 'quick-add-dialog';
+    history.pushState(history.state, '', `${window.location.pathname}${window.location.search}#${hashId}`);
 
-    const onPopState = (e: PopStateEvent) => {
-      // Only close when navigating AWAY from our entry
-      if (e.state?.overlay === 'quick-add-dialog') return;
+    const onPopState = () => {
+      if (window.location.hash === `#${hashId}`) return;
       handleClose();
     };
 
     window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if (window.location.hash === `#${hashId}`) {
+        history.replaceState(history.state, '', originalHref);
+      }
+    };
   }, [open]);
 
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      history.back();
-      handleClose();
-    }
+    if (!isOpen) handleClose();
   };
 
   return (

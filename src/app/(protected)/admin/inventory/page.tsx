@@ -526,6 +526,19 @@ function InventoryPageContent() {
     setEditingTableItem(item);
   }, []);
 
+  const handleDeleteFromDetails = useCallback(async (item: InventoryItemForList) => {
+    const { error } = await supabase
+      .from('inventory_items')
+      .delete()
+      .eq('id', item.id)
+      .neq('status', 'sold');
+    if (error) { toast.error('Failed to delete item'); return; }
+    toast.success('Item deleted');
+    setViewingItem(null);
+    fetchInventory();
+    refreshStats();
+  }, [fetchInventory, refreshStats]);
+
   if (statusFilter !== 'all') filterChips.push({ label: 'Status', value: statusFilter, onClear: () => { setStatusFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
   if (categoryFilter !== 'all') filterChips.push({ label: 'Category', value: categories.find(c => c.id === categoryFilter)?.name || categoryFilter, onClear: () => { setCategoryFilter('all'); setCurrentPage(1); } });
   if (saleTypeFilter !== 'all') filterChips.push({ label: 'Order Type', value: saleTypeFilter === 'normal' ? 'Normal' : saleTypeFilter === 'promotion' ? 'Promotion Sale' : saleTypeFilter === 'festival' ? 'Festival Sale' : saleTypeFilter, onClear: () => { setSaleTypeFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
@@ -822,19 +835,14 @@ function InventoryPageContent() {
                     return (
                       <tr
                         key={item.id}
-                        className={`border-b hover:bg-muted/50 transition-colors group animate-stagger-fade-in ${bgClass}`}
+                        className={`border-b hover:bg-muted/50 transition-colors group animate-stagger-fade-in cursor-pointer ${bgClass}`}
                         style={{ '--row-index': idx } as React.CSSProperties}
+                        onClick={() => setViewingItem(item)}
                       >
                         <td className="py-3 px-3">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setViewingItem(item); }}
-                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                            title="View details"
-                          >
-                            <Badge variant="outline" className={`font-mono ${s.accent.hoverBg} ${s.accent.hoverBorder}`}>
-                              {item.qr_codes?.code}
-                            </Badge>
-                          </button>
+                          <Badge variant="outline" className={`font-mono ${s.accent.hoverBg} ${s.accent.hoverBorder}`}>
+                            {item.qr_codes?.code}
+                          </Badge>
                         </td>
                         <td className="py-3 px-3 text-xs whitespace-nowrap">
                           {item.lots?.categories?.name || 'No category'}
@@ -932,6 +940,7 @@ function InventoryPageContent() {
         item={viewingItem}
         onClose={() => setViewingItem(null)}
         onEdit={handleEditFromDetails}
+        onDelete={handleDeleteFromDetails}
         onAddToCart={handleAddToCart}
       />
 

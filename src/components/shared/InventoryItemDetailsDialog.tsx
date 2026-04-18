@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Package, Calendar, Tag, DollarSign, Layers, ShieldCheck, ShoppingCart, Pencil } from 'lucide-react';
+import { Package, Calendar, Tag, DollarSign, Layers, ShieldCheck, ShoppingCart, Pencil, Trash2 } from 'lucide-react';
 import { appConfig } from '@/lib/config';
 import type { InventoryItemForList } from '@/types';
 
@@ -21,14 +21,16 @@ interface InventoryItemDetailsDialogProps {
   item: InventoryItemForList | null;
   onClose: () => void;
   onEdit?: (item: InventoryItemForList) => void;
+  onDelete?: (item: InventoryItemForList) => void;
   /** Optional callback to add this item to the POS cart. Button only shows when provided + item is available. */
   onAddToCart?: (item: InventoryItemForList) => void;
 }
 
-export function InventoryItemDetailsDialog({ item, onClose, onEdit, onAddToCart }: InventoryItemDetailsDialogProps) {
+export function InventoryItemDetailsDialog({ item, onClose, onEdit, onDelete, onAddToCart }: InventoryItemDetailsDialogProps) {
   if (!item) return null;
 
   const canEdit = item.status === 'available';
+  const canDelete = item.status !== 'sold';
 
   const statusVariant = {
     available: 'default' as const,
@@ -219,17 +221,29 @@ export function InventoryItemDetailsDialog({ item, onClose, onEdit, onAddToCart 
           )}
         </div>
 
-        <div className="shrink-0 border-t px-5 py-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          {onEdit && canEdit && (
-            <Button onClick={() => onEdit(item)} variant="secondary" className="sm:flex-1">
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit Item
-            </Button>
+        <div className="shrink-0 border-t px-5 py-3 space-y-2">
+          {/* Edit + Delete — side by side */}
+          {((onEdit && canEdit) || (onDelete && canDelete)) && (
+            <div className="flex gap-2">
+              {onEdit && canEdit && (
+                <Button onClick={() => onEdit(item)} variant="secondary" className="flex-1">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+              {onDelete && canDelete && (
+                <Button onClick={() => onDelete(item)} variant="outline" className="flex-1 text-destructive hover:bg-destructive/10 hover:border-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
           )}
+          {/* Add to Cart — always full width */}
           {onAddToCart && item.status === 'available' && (
             <Button
               onClick={() => onAddToCart(item)}
-              className={`${onEdit && canEdit ? 'sm:flex-1' : 'sm:w-full'} ${s.primaryGradient} ${s.primaryGradientHover} text-white ${s.btnAnimation}`}
+              className={`w-full ${s.primaryGradient} ${s.primaryGradientHover} text-white ${s.btnAnimation}`}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
               Add to Cart

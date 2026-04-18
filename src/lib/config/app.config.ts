@@ -199,7 +199,7 @@ export const appConfig = {
     /** Header text on receipts (usually uppercase) */
     receiptHeader: 'WOMANIYA',
     /** Logo image path (relative to public folder) */
-    logoPath: '/womaniya_logo_darkbg.png',
+    logoPath: '/womaniya_logo_lightbg.png',
     /** Alt text for logo image */
     logoAlt: 'Womaniya Logo',
   },
