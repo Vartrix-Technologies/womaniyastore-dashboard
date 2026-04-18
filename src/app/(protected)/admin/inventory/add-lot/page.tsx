@@ -19,12 +19,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { PickerDialog } from '@/components/shared/PickerDialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, HelpCircle, Package, Check, ChevronsUpDown, Eye, ChevronLeft, Plus, AlertCircle, Settings2 } from 'lucide-react';
+import { ArrowLeft, Loader2, HelpCircle, Package, ChevronsUpDown, Eye, ChevronLeft, AlertCircle, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import { appConfig } from '@/lib/config/app.config';
 import { formatCurrency } from '@/lib/formatters';
@@ -45,14 +44,12 @@ export default function AddStockLotPage() {
   const [showPreview, setShowPreview] = useState(false);
   // Vendor autocomplete
   const [vendorNames, setVendorNames] = useState<string[]>([]);
-  const [vendorPopoverOpen, setVendorPopoverOpen] = useState(false);
-  // QR prefix autocomplete
-  const [prefixPopoverOpen, setPrefixPopoverOpen] = useState(false);
-  // Category & Size inline view switcher
-  const [pageView, setPageView] = useState<'form' | 'category' | 'size'>('form');
-  const [categorySearch, setCategorySearch] = useState('');
+  // Picker dialogs — individual open state per field
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [sizePickerOpen, setSizePickerOpen] = useState(false);
+  const [prefixPickerOpen, setPrefixPickerOpen] = useState(false);
+  const [vendorPickerOpen, setVendorPickerOpen] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
-  const [sizeSearch, setSizeSearch] = useState('');
   const [creatingSize, setCreatingSize] = useState(false);
 
   const {
@@ -157,10 +154,6 @@ export default function AddStockLotPage() {
     try {
       const data = await fetchActiveQrPrefixes(profile.shop_id);
       setQrPrefixes(data || []);
-      if (data && data.length > 0) {
-        setValue('prefix_id', data[0].id);
-        updateAvailableQrCount(data[0].id);
-      }
     } catch (error) {
       console.error('Error fetching QR prefixes:', error);
       toast.error('Failed to load QR prefixes');
@@ -201,14 +194,12 @@ export default function AddStockLotPage() {
     updateAvailableQrCount(prefixId);
   };
 
-  const handleCreateCategory = async () => {
-    const name = categorySearch.trim();
+  const handleCreateCategory = async (name: string) => {
     if (!name || !profile?.shop_id) return;
     const existing = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
     if (existing) {
       setValue('category_id', existing.id);
-      setCategorySearch('');
-      setPageView('form');
+      setCategoryPickerOpen(false);
       return;
     }
     setCreatingCategory(true);
@@ -221,8 +212,7 @@ export default function AddStockLotPage() {
       if (error) throw error;
       setCategories(prev => [...prev, data]);
       setValue('category_id', data.id);
-      setCategorySearch('');
-      setPageView('form');
+      setCategoryPickerOpen(false);
       toast.success(`Category "${data.name}" created`);
     } catch (error: any) {
       toast.error(error.message?.includes('duplicate') ? 'Category already exists' : 'Failed to create category');
@@ -231,14 +221,12 @@ export default function AddStockLotPage() {
     }
   };
 
-  const handleCreateSize = async () => {
-    const name = sizeSearch.trim();
+  const handleCreateSize = async (name: string) => {
     if (!name || !profile?.shop_id) return;
     const existing = sizes.find(sz => sz.size_name.toLowerCase() === name.toLowerCase());
     if (existing) {
       setValue('size_id', existing.id);
-      setSizeSearch('');
-      setPageView('form');
+      setSizePickerOpen(false);
       return;
     }
     setCreatingSize(true);
@@ -251,8 +239,7 @@ export default function AddStockLotPage() {
       if (error) throw error;
       setSizes(prev => [...prev, data]);
       setValue('size_id', data.id);
-      setSizeSearch('');
-      setPageView('form');
+      setSizePickerOpen(false);
       toast.success(`Size "${data.size_name}" created`);
     } catch (error: any) {
       toast.error(error.message?.includes('duplicate') ? 'Size already exists' : 'Failed to create size');
@@ -343,115 +330,6 @@ export default function AddStockLotPage() {
           <CardDescription className="text-sm">Fill in the details for the new stock lot</CardDescription>
         </CardHeader> */}
         <CardContent>
-          {/* Category Picker View */}
-          {pageView === 'category' && (
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => { setPageView('form'); setCategorySearch(''); }}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <p className="text-sm font-medium">Select Category</p>
-              </div>
-              <Command className="border rounded-lg">
-                <CommandInput
-                  placeholder="Search or type new..."
-                  value={categorySearch}
-                  onValueChange={setCategorySearch}
-                  autoFocus
-                />
-                <CommandList>
-                  <CommandEmpty>
-                    {categorySearch.trim() ? (
-                      <button
-                        type="button"
-                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
-                        onClick={handleCreateCategory}
-                        disabled={creatingCategory}
-                      >
-                        {creatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                        Create &quot;{categorySearch.trim()}&quot;
-                      </button>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Type to search or create</span>
-                    )}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {categories.map((cat) => (
-                      <CommandItem
-                        key={cat.id}
-                        value={cat.name}
-                        onSelect={() => { setValue('category_id', cat.id); setPageView('form'); setCategorySearch(''); }}
-                      >
-                        <Check className={`mr-2 h-4 w-4 ${allValues.category_id === cat.id ? 'opacity-100' : 'opacity-0'}`} />
-                        {cat.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          )}
-
-          {/* Size Picker View */}
-          {pageView === 'size' && (
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => { setPageView('form'); setSizeSearch(''); }}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <p className="text-sm font-medium">Select Size</p>
-              </div>
-              <Command className="border rounded-lg">
-                <CommandInput
-                  placeholder="Search or type new..."
-                  value={sizeSearch}
-                  onValueChange={setSizeSearch}
-                  autoFocus
-                />
-                <CommandList>
-                  <CommandEmpty>
-                    {sizeSearch.trim() ? (
-                      <button
-                        type="button"
-                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
-                        onClick={handleCreateSize}
-                        disabled={creatingSize}
-                      >
-                        {creatingSize ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                        Create &quot;{sizeSearch.trim()}&quot;
-                      </button>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Type to search or create</span>
-                    )}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {sizes.map((size) => (
-                      <CommandItem
-                        key={size.id}
-                        value={size.size_name}
-                        onSelect={() => { setValue('size_id', size.id); setPageView('form'); setSizeSearch(''); }}
-                      >
-                        <Check className={`mr-2 h-4 w-4 ${allValues.size_id === size.id ? 'opacity-100' : 'opacity-0'}`} />
-                        {size.size_name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          )}
-
-          {pageView === 'form' && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Category - autocomplete with inline create */}
             <div className="space-y-2">
@@ -469,7 +347,7 @@ export default function AddStockLotPage() {
                     id="category"
                     type="button"
                     variant="outline"
-                    onClick={() => setPageView('category')}
+                    onClick={() => setCategoryPickerOpen(true)}
                     className={`w-full justify-between font-normal text-sm ${errors.category_id ? 'border-red-500' : ''}`}
                   >
                     {field.value ? (
@@ -486,10 +364,10 @@ export default function AddStockLotPage() {
 
             {/* QR Prefix — autocomplete combobox */}
             <div className="space-y-2">
-              <div className="flex flex-row gap-3 items-center">
+              <div className="flex flex-row items-center justify-between">
                 <Label htmlFor="prefix" className="text-sm">QR Prefix *</Label>
-                <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors">
-                  Can&apos;t see your QR prefix?
+                <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline flex items-center gap-1">
+                  <Settings2 className="h-3 w-3" /> Manage
                 </Link>
               </div>
               {qrPrefixes.length === 0 ? (
@@ -502,60 +380,29 @@ export default function AddStockLotPage() {
                     name="prefix_id"
                     control={control}
                     render={({ field }) => (
-                      <Popover open={prefixPopoverOpen} onOpenChange={setPrefixPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={prefixPopoverOpen}
-                            className={`w-full justify-between font-normal text-sm ${errors.prefix_id ? 'border-red-500' : ''}`}
-                          >
-                            {field.value ? (
-                              <span>
-                                <span className="font-mono font-bold">
-                                  {qrPrefixes.find(p => p.id === field.value)?.prefix}
-                                </span>
-                                {qrPrefixes.find(p => p.id === field.value)?.description && (
-                                  <span className="ml-2 text-muted-foreground text-xs">
-                                    ({qrPrefixes.find(p => p.id === field.value)?.description})
-                                  </span>
-                                )}
+                      <Button
+                        id="prefix"
+                        type="button"
+                        variant="outline"
+                        onClick={() => setPrefixPickerOpen(true)}
+                        className={`w-full justify-between font-normal text-sm ${errors.prefix_id ? 'border-red-500' : ''}`}
+                      >
+                        {field.value ? (
+                          <span>
+                            <span className="font-mono font-bold">
+                              {qrPrefixes.find(p => p.id === field.value)?.prefix}
+                            </span>
+                            {qrPrefixes.find(p => p.id === field.value)?.description && (
+                              <span className="ml-2 text-muted-foreground text-xs">
+                                ({qrPrefixes.find(p => p.id === field.value)?.description})
                               </span>
-                            ) : (
-                              <span className="text-muted-foreground">Select QR prefix...</span>
                             )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search prefixes..." />
-                            <CommandList>
-                              <CommandEmpty>No prefix found.</CommandEmpty>
-                              <CommandGroup>
-                                {qrPrefixes.map((prefix) => (
-                                  <CommandItem
-                                    key={prefix.id}
-                                    value={`${prefix.prefix} ${prefix.description || ''}`}
-                                    onSelect={() => {
-                                      handlePrefixChange(prefix.id);
-                                      setPrefixPopoverOpen(false);
-                                    }}
-                                  >
-                                    <Check className={`mr-2 h-4 w-4 ${field.value === prefix.id ? 'opacity-100' : 'opacity-0'}`} />
-                                    <span className="font-mono font-bold">{prefix.prefix}</span>
-                                    {prefix.description && (
-                                      <span className="ml-2 text-muted-foreground text-xs">
-                                        ({prefix.description})
-                                      </span>
-                                    )}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Select QR prefix...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
                     )}
                   />
                   {errors.prefix_id && <p className="text-xs text-red-500">{errors.prefix_id.message}</p>}
@@ -593,7 +440,7 @@ export default function AddStockLotPage() {
                       id="size"
                       type="button"
                       variant="outline"
-                      onClick={() => setPageView('size')}
+                      onClick={() => setSizePickerOpen(true)}
                       className={`w-full justify-between font-normal text-sm ${errors.size_id ? 'border-red-500' : ''}`}
                     >
                       {field.value ? (
@@ -622,67 +469,19 @@ export default function AddStockLotPage() {
             {/* Vendor Name — autocomplete combobox */}
             <div className="space-y-2">
               <Label htmlFor="vendor_name" className="text-sm">Vendor Name</Label>
-              <Controller
-                name="vendor_name"
-                control={control}
-                render={({ field }) => (
-                  <Popover open={vendorPopoverOpen} onOpenChange={setVendorPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={vendorPopoverOpen}
-                        className="w-full justify-between font-normal text-sm"
-                      >
-                        {field.value ? (
-                          <span>{field.value}</span>
-                        ) : (
-                          <span className="text-muted-foreground">e.g., ABC Suppliers</span>
-                        )}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search or type new vendor..."
-                          onValueChange={(v) => field.onChange(v)}
-                        />
-                        <CommandList>
-                          <CommandEmpty>
-                            {field.value ? (
-                              <button
-                                type="button"
-                                className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded"
-                                onClick={() => setVendorPopoverOpen(false)}
-                              >
-                                Use &quot;{field.value}&quot;
-                              </button>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">Type to add new vendor</span>
-                            )}
-                          </CommandEmpty>
-                          <CommandGroup heading="Existing Vendors">
-                            {vendorNames.map((name) => (
-                              <CommandItem
-                                key={name}
-                                value={name}
-                                onSelect={(v) => {
-                                  field.onChange(v);
-                                  setVendorPopoverOpen(false);
-                                }}
-                              >
-                                <Check className={`mr-2 h-4 w-4 ${field.value === name ? 'opacity-100' : 'opacity-0'}`} />
-                                {name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setVendorPickerOpen(true)}
+                className="w-full justify-between font-normal text-sm"
+              >
+                {allValues.vendor_name ? (
+                  <span>{allValues.vendor_name}</span>
+                ) : (
+                  <span className="text-muted-foreground">e.g., ABC Suppliers</span>
                 )}
-              />
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
             </div>
 
             {/* Date and Quantity */}
@@ -980,9 +779,57 @@ export default function AddStockLotPage() {
               </div>
             )}
           </form>
-          )}
         </CardContent>
       </Card>
+
+      {/* ── Picker Dialogs ── */}
+      <PickerDialog
+        open={categoryPickerOpen}
+        onOpenChange={setCategoryPickerOpen}
+        title="Select Category"
+        searchPlaceholder="Search or type new..."
+        items={categories.map(c => ({ id: c.id, label: c.name }))}
+        selectedId={allValues.category_id}
+        onSelect={(id) => setValue('category_id', id)}
+        allowCreate
+        onCreateNew={handleCreateCategory}
+        creating={creatingCategory}
+      />
+      <PickerDialog
+        open={sizePickerOpen}
+        onOpenChange={setSizePickerOpen}
+        title="Select Size"
+        searchPlaceholder="Search or type new..."
+        items={sizes.map(sz => ({ id: sz.id, label: sz.size_name }))}
+        selectedId={allValues.size_id}
+        onSelect={(id) => setValue('size_id', id)}
+        allowCreate
+        onCreateNew={handleCreateSize}
+        creating={creatingSize}
+      />
+      <PickerDialog
+        open={prefixPickerOpen}
+        onOpenChange={setPrefixPickerOpen}
+        title="Select QR Prefix"
+        searchPlaceholder="Search prefixes..."
+        items={qrPrefixes.map(p => ({ id: p.id, label: p.prefix, sublabel: p.description || undefined, mono: true }))}
+        selectedId={allValues.prefix_id}
+        onSelect={(id) => handlePrefixChange(id)}
+      />
+      <PickerDialog
+        open={vendorPickerOpen}
+        onOpenChange={setVendorPickerOpen}
+        title="Vendor Name"
+        searchPlaceholder="Search or type new vendor..."
+        items={vendorNames.map(v => ({ id: v, label: v }))}
+        selectedId={allValues.vendor_name}
+        onSelect={(id) => setValue('vendor_name', id)}
+        allowCreate
+        createLabel="Use"
+        onCreateNew={(name) => { setValue('vendor_name', name); setVendorPickerOpen(false); }}
+        groupHeading="Existing Vendors"
+        initialSearchValue={allValues.vendor_name || ''}
+      />
 
       {/* Help Accordion */}
       <Accordion type="single" collapsible className="border rounded-lg">

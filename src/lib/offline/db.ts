@@ -44,7 +44,7 @@ interface WomaniyaDB extends DBSchema {
 }
 
 const DB_NAME = appConfig.internal.idbName;
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance: IDBPDatabase<WomaniyaDB> | null = null;
 

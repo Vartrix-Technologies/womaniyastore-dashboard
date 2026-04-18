@@ -74,7 +74,7 @@ export default function LoginPage() {
       // The button stays in "Signing in..." state until the page navigates
       // away, which prevents a flash of the enabled button.
     } catch (error) {
-      console.error('[Login] signIn:error', error);
+      console.warn('[Login] signIn failed:', error instanceof Error ? error.message : error);
       toast.error(error instanceof Error ? error.message : 'Failed to sign in');
       setLoading(false);
     }

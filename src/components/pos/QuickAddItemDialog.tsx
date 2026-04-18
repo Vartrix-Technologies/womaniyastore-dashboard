@@ -12,8 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Zap, Plus, Loader2, Check, ChevronsUpDown, Settings2, ArrowLeft } from 'lucide-react';
+import { PickerDialog } from '@/components/shared/PickerDialog';
+import { Zap, Plus, Loader2, ChevronsUpDown, Settings2 } from 'lucide-react';
 import type { CartItem } from '@/types/pos.types';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -24,8 +24,6 @@ import { appConfig } from '@/lib/config/app.config';
 import Link from 'next/link';
 
 const s = appConfig.styles;
-
-type View = 'form' | 'category' | 'size';
 
 interface QuickAddItemDialogProps {
   open: boolean;
@@ -39,16 +37,15 @@ export function QuickAddItemDialog({
   onAddToCart,
 }: QuickAddItemDialogProps) {
   const { profile } = useAuth();
-  const [view, setView] = useState<View>('form');
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [sizes, setSizes] = useState<{ id: string; size_name: string }[]>([]);
   const [loadingRef, setLoadingRef] = useState(false);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [sizePickerOpen, setSizePickerOpen] = useState(false);
 
   // Form state
   const [categoryName, setCategoryName] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
   const [sizeName, setSizeName] = useState('');
-  const [sizeSearch, setSizeSearch] = useState('');
   const [price, setPrice] = useState('');
   const [taxRate, setTaxRate] = useState(String(DEFAULT_TAX_RATE));
   const [note, setNote] = useState('');
@@ -80,12 +77,12 @@ export function QuickAddItemDialog({
     return () => { cancelled = true; };
   }, [open]);
 
-  const handleCreateCategory = async () => {
-    const name = categorySearch.trim();
+  const handleCreateCategory = async (name: string) => {
     if (!name || !profile?.shop_id) return;
-    if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-      setCategoryName(categories.find(c => c.name.toLowerCase() === name.toLowerCase())!.name);
-      setView('form');
+    const existing = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setCategoryName(existing.name);
+      setCategoryPickerOpen(false);
       return;
     }
     setCreatingCategory(true);
@@ -98,7 +95,7 @@ export function QuickAddItemDialog({
       if (error) throw error;
       setCategories(prev => [...prev, data]);
       setCategoryName(data.name);
-      setView('form');
+      setCategoryPickerOpen(false);
       toast.success(`Category "${data.name}" created`);
     } catch (error: any) {
       toast.error(error.message?.includes('duplicate') ? 'Category already exists' : 'Failed to create category');
@@ -107,12 +104,12 @@ export function QuickAddItemDialog({
     }
   };
 
-  const handleCreateSize = async () => {
-    const name = sizeSearch.trim();
+  const handleCreateSize = async (name: string) => {
     if (!name || !profile?.shop_id) return;
-    if (sizes.some(sz => sz.size_name.toLowerCase() === name.toLowerCase())) {
-      setSizeName(sizes.find(sz => sz.size_name.toLowerCase() === name.toLowerCase())!.size_name);
-      setView('form');
+    const existing = sizes.find(sz => sz.size_name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setSizeName(existing.size_name);
+      setSizePickerOpen(false);
       return;
     }
     setCreatingSize(true);
@@ -125,7 +122,7 @@ export function QuickAddItemDialog({
       if (error) throw error;
       setSizes(prev => [...prev, data]);
       setSizeName(data.size_name);
-      setView('form');
+      setSizePickerOpen(false);
       toast.success(`Size "${data.size_name}" created`);
     } catch (error: any) {
       toast.error(error.message?.includes('duplicate') ? 'Size already exists' : 'Failed to create size');
@@ -167,135 +164,47 @@ export function QuickAddItemDialog({
 
   const handleClose = () => {
     onOpenChange(false);
-    setView('form');
+    setCategoryPickerOpen(false);
+    setSizePickerOpen(false);
     setCategoryName('');
-    setCategorySearch('');
     setSizeName('');
-    setSizeSearch('');
     setPrice('');
     setTaxRate(String(DEFAULT_TAX_RATE));
     setNote('');
   };
 
-  // When close button is pressed, go back to form if in sub-view, else close
+  // ── Back-button interception via history API ──
+  // Push a history entry when the dialog opens. Uses a stable key so
+  // PickerDialog popstate handlers (which push their own entries) don't
+  // accidentally close this parent dialog.
+  useEffect(() => {
+    if (!open) return;
+
+    history.pushState({ overlay: 'quick-add-dialog' }, '');
+
+    const onPopState = (e: PopStateEvent) => {
+      // Only close when navigating AWAY from our entry
+      if (e.state?.overlay === 'quick-add-dialog') return;
+      handleClose();
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [open]);
+
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      if (view !== 'form') {
-        setView('form');
-      } else {
-        handleClose();
-      }
+      history.back();
+      handleClose();
     }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
 
-        {/* ── CATEGORY PICKER VIEW ── */}
-        {view === 'category' && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { setView('form'); setCategorySearch(''); }}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <DialogTitle>Select Category</DialogTitle>
-              </div>
-            </DialogHeader>
-            <Command className="border rounded-md">
-              <CommandInput
-                placeholder="Search or type new..."
-                value={categorySearch}
-                onValueChange={setCategorySearch}
-                autoFocus
-              />
-              <CommandList className="max-h-[55dvh]">
-                <CommandEmpty>
-                  {categorySearch.trim() ? (
-                    <button
-                      type="button"
-                      className="w-full px-3 py-2 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
-                      onClick={handleCreateCategory}
-                      disabled={creatingCategory}
-                    >
-                      {creatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                      Create &quot;{categorySearch.trim()}&quot;
-                    </button>
-                  ) : (
-                    <span className="text-muted-foreground text-xs px-3">Type to search or create</span>
-                  )}
-                </CommandEmpty>
-                <CommandGroup>
-                  {categories.map((c) => (
-                    <CommandItem
-                      key={c.id}
-                      value={c.name}
-                      onSelect={(v) => { setCategoryName(v); setView('form'); }}
-                    >
-                      <Check className={`mr-2 h-4 w-4 ${categoryName === c.name ? 'opacity-100' : 'opacity-0'}`} />
-                      {c.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </>
-        )}
-
-        {/* ── SIZE PICKER VIEW ── */}
-        {view === 'size' && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { setView('form'); setSizeSearch(''); }}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <DialogTitle>Select Size</DialogTitle>
-              </div>
-            </DialogHeader>
-            <Command className="border rounded-md">
-              <CommandInput
-                placeholder="Search or type new..."
-                value={sizeSearch}
-                onValueChange={setSizeSearch}
-                autoFocus
-              />
-              <CommandList className="max-h-[55dvh]">
-                <CommandEmpty>
-                  {sizeSearch.trim() ? (
-                    <button
-                      type="button"
-                      className="w-full px-3 py-2 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
-                      onClick={handleCreateSize}
-                      disabled={creatingSize}
-                    >
-                      {creatingSize ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                      Create &quot;{sizeSearch.trim()}&quot;
-                    </button>
-                  ) : (
-                    <span className="text-muted-foreground text-xs px-3">Type to search or create</span>
-                  )}
-                </CommandEmpty>
-                <CommandGroup>
-                  {sizes.map((sz) => (
-                    <CommandItem
-                      key={sz.id}
-                      value={sz.size_name}
-                      onSelect={(v) => { setSizeName(v); setView('form'); }}
-                    >
-                      <Check className={`mr-2 h-4 w-4 ${sizeName === sz.size_name ? 'opacity-100' : 'opacity-0'}`} />
-                      {sz.size_name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </>
-        )}
-
         {/* ── MAIN FORM VIEW ── */}
-        {view === 'form' && (
           <>
             <DialogHeader>
               <div className="flex items-center gap-2">
@@ -331,7 +240,7 @@ export function QuickAddItemDialog({
                 ) : (
                   <Button
                     variant="outline"
-                    onClick={() => setView('category')}
+                    onClick={() => setCategoryPickerOpen(true)}
                     className="w-full justify-between font-normal text-sm"
                   >
                     {categoryName || <span className="text-muted-foreground">Select category</span>}
@@ -352,7 +261,7 @@ export function QuickAddItemDialog({
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => setView('size')}
+                  onClick={() => setSizePickerOpen(true)}
                   className="w-full justify-between font-normal text-sm"
                 >
                   {sizeName || <span className="text-muted-foreground">Select size (optional)</span>}
@@ -418,9 +327,41 @@ export function QuickAddItemDialog({
               </Button>
             </DialogFooter>
           </>
-        )}
 
       </DialogContent>
     </Dialog>
+
+    {/* ── Picker Dialogs (siblings, not nested) ── */}
+    <PickerDialog
+      open={categoryPickerOpen}
+      onOpenChange={setCategoryPickerOpen}
+      title="Select Category"
+      searchPlaceholder="Search or type new..."
+      items={categories.map(c => ({ id: c.id, label: c.name }))}
+      selectedId={categories.find(c => c.name === categoryName)?.id}
+      onSelect={(id) => {
+        const cat = categories.find(c => c.id === id);
+        if (cat) setCategoryName(cat.name);
+      }}
+      allowCreate
+      onCreateNew={handleCreateCategory}
+      creating={creatingCategory}
+    />
+    <PickerDialog
+      open={sizePickerOpen}
+      onOpenChange={setSizePickerOpen}
+      title="Select Size"
+      searchPlaceholder="Search or type new..."
+      items={sizes.map(sz => ({ id: sz.id, label: sz.size_name }))}
+      selectedId={sizes.find(sz => sz.size_name === sizeName)?.id}
+      onSelect={(id) => {
+        const sz = sizes.find(s => s.id === id);
+        if (sz) setSizeName(sz.size_name);
+      }}
+      allowCreate
+      onCreateNew={handleCreateSize}
+      creating={creatingSize}
+    />
+    </>
   );
 }

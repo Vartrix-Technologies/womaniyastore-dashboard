@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PickerDialog } from '@/components/shared/PickerDialog';
 import {
-  Pencil, Loader2, Package, IndianRupee, Tag, Layers, AlertTriangle,
+  Pencil, Loader2, Package, IndianRupee, Tag, Layers, AlertTriangle, ChevronsUpDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/lib/formatters';
@@ -56,6 +56,8 @@ interface EditLotDialogProps {
 
 export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: EditLotDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [sizePickerOpen, setSizePickerOpen] = useState(false);
 
   // Form fields
   const [categoryId, setCategoryId] = useState('');
@@ -187,6 +189,7 @@ export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: Edit
   };
 
   return (
+    <>
     <Dialog open={!!lot} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden">
         {/* Header */}
@@ -236,16 +239,19 @@ export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: Edit
             <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <Tag className="h-3 w-3" /> Category <span className="text-red-400">*</span>
             </Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id} className="text-sm">{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCategoryPickerOpen(true)}
+              className="w-full justify-between font-normal text-sm"
+            >
+              {categoryId ? (
+                <span>{categories.find(c => c.id === categoryId)?.name || 'Select category'}</span>
+              ) : (
+                <span className="text-muted-foreground">Select category</span>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
           </div>
 
           {/* Size fields */}
@@ -254,17 +260,19 @@ export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: Edit
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Size
               </Label>
-              <Select value={sizeId || 'none'} onValueChange={(v) => setSizeId(v === 'none' ? '' : v)}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Select size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" className="text-sm text-muted-foreground">No size</SelectItem>
-                  {sizes.map(sz => (
-                    <SelectItem key={sz.id} value={sz.id} className="text-sm">{sz.size_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSizePickerOpen(true)}
+                className="w-full justify-between font-normal text-sm"
+              >
+                {sizeId ? (
+                  <span>{sizes.find(sz => sz.id === sizeId)?.size_name || 'Select size'}</span>
+                ) : (
+                  <span className="text-muted-foreground">No size</span>
+                )}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -494,5 +502,29 @@ export function EditLotDialog({ lot, categories, sizes, onClose, onSaved }: Edit
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* ── Picker Dialogs ── */}
+    <PickerDialog
+      open={categoryPickerOpen}
+      onOpenChange={setCategoryPickerOpen}
+      title="Select Category"
+      searchPlaceholder="Search categories..."
+      items={categories.map(c => ({ id: c.id, label: c.name }))}
+      selectedId={categoryId}
+      onSelect={(id) => setCategoryId(id)}
+    />
+    <PickerDialog
+      open={sizePickerOpen}
+      onOpenChange={setSizePickerOpen}
+      title="Select Size"
+      searchPlaceholder="Search sizes..."
+      items={[
+        { id: 'none', label: 'No size' },
+        ...sizes.map(sz => ({ id: sz.id, label: sz.size_name })),
+      ]}
+      selectedId={sizeId || 'none'}
+      onSelect={(id) => setSizeId(id === 'none' ? '' : id)}
+    />
+    </>
   );
 }

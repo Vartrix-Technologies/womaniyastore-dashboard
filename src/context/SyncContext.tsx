@@ -48,9 +48,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   // Load pending sales from IndexedDB
   const loadPendingSales = useCallback(async () => {
-    const sales = await getPendingSalesByStatus('pending');
-    const failed = await getPendingSalesByStatus('failed');
-    setPendingSales([...sales, ...failed]);
+    try {
+      const sales = await getPendingSalesByStatus('pending');
+      const failed = await getPendingSalesByStatus('failed');
+      setPendingSales([...sales, ...failed]);
+    } catch (err) {
+      console.warn('[Sync] Failed to load pending sales from IndexedDB:', err);
+      setPendingSales([]);
+    }
   }, []);
 
   // Sync a single sale
