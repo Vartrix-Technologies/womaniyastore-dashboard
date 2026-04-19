@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
+
 import { TrendingUp, AlertCircle } from 'lucide-react';
 import { format, subMonths, startOfMonth } from 'date-fns';
 import { supabase } from '@/lib/supabase';
@@ -43,11 +43,17 @@ interface DataPoint {
   [category: string]: number | string;
 }
 
+interface TooltipEntry {
+  name?: string;
+  value?: number;
+  color?: string;
+}
+
 function calcMargin(revenue: number, cost: number): number {
   return revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
 }
 
-function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="bg-popover text-popover-foreground border rounded-lg shadow-lg p-3 text-xs space-y-1 min-w-[160px]">

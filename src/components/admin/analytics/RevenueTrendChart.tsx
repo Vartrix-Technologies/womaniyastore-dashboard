@@ -14,7 +14,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
 import { TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
 import {
   format,
@@ -264,7 +263,14 @@ function getPeriodLabels(dateFilter: DateFilterType): { current: string; prior: 
 }
 
 // --- Custom Recharts tooltip ---
-function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+interface TooltipEntry {
+  dataKey?: string | number;
+  value?: number;
+  color?: string;
+  payload?: ChartPoint;
+}
+
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
   if (!active || !payload || payload.length === 0) return null;
 
   const currentEntry = payload.find(p => p.dataKey === 'current');
