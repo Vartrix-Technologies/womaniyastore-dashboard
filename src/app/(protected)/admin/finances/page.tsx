@@ -36,6 +36,8 @@ const s = appConfig.styles;
 
 interface FinancialSummary {
   totalRevenue: number;
+  totalCOGS: number;
+  grossProfit: number;
   totalExpenses: number;
   netProfit: number;
   salesCount: number;
@@ -75,6 +77,8 @@ function FinancesPageContent() {
   const { dateFilter, setDateFilter, customRange, setCustomRange, dateRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: initialDateFilter });
   const [summary, setSummary] = useState<FinancialSummary>(() => getCachedStats('finance_summary', {
     totalRevenue: 0,
+    totalCOGS: 0,
+    grossProfit: 0,
     totalExpenses: 0,
     netProfit: 0,
     salesCount: 0,
@@ -181,7 +185,7 @@ function FinancesPageContent() {
       // Build queries
       let salesQuery = supabase
         .from('sales')
-        .select('total_amount')
+        .select('id, total_amount')
         .eq('shop_id', profile.shop_id)
         .lte('created_at', toDate);
 
@@ -248,7 +252,7 @@ function FinancesPageContent() {
       }
 
       // Parallelize all data fetches for faster load
-      const [salesResult, transResult, inventoryResult, statsTransResult, returnsResult] = await Promise.all([
+      const [salesResult, transResult, inventoryResult, statsTransResult, returnsResult, cogsResult] = await Promise.all([
         salesQuery,
         transQuery,
         supabase
@@ -260,7 +264,19 @@ function FinancesPageContent() {
           .eq('shop_id', profile.shop_id)
           .eq('status', 'available'),
         statsTransQuery,
-        returnsQuery
+        returnsQuery,
+        // COGS: sum cost_price from sale_items joined to sales in date range
+        (() => {
+          let cogsQuery = supabase
+            .from('sale_items')
+            .select('cost_price, sale:sales!inner(created_at)')
+            .eq('shop_id', profile.shop_id)
+            .lte('sale.created_at', toDate);
+          if (fromDate) {
+            cogsQuery = cogsQuery.gte('sale.created_at', fromDate);
+          }
+          return cogsQuery;
+        })(),
       ]);
 
       // Log individual query errors but don't throw — show partial data
@@ -270,6 +286,7 @@ function FinancesPageContent() {
       if (inventoryResult.error) queryErrors.push(`Inventory: ${inventoryResult.error.message}`);
       if (statsTransResult.error) queryErrors.push(`Expense stats: ${statsTransResult.error.message}`);
       if (returnsResult.error) queryErrors.push(`Returns: ${returnsResult.error.message}`);
+      if (cogsResult.error) queryErrors.push(`COGS: ${cogsResult.error.message}`);
 
       if (queryErrors.length > 0) {
         console.error('Financial query errors:', queryErrors);
@@ -283,20 +300,24 @@ function FinancesPageContent() {
       const statsTransData = statsTransResult.data;
       const returnsData = returnsResult.data;
       const returnsCount = returnsResult.count || 0;
+      const cogsData = cogsResult.data;
 
       // Calculate summary from FULL filtered dataset (using available data)
       const totalRevenue = (salesData as any[] | null)?.reduce((sum: number, sale: any) => sum + (sale.total_amount || 0), 0) || 0;
       const totalRefunds = (returnsData as any[] | null)?.reduce((sum: number, r: any) => sum + (r.refund_amount || 0), 0) || 0;
       const totalExpenses = (statsTransData as any[] | null)?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0;
       const inventoryValue = (inventoryData as any[] | null)?.reduce((sum: number, item: any) => sum + (item.cost_price || 0), 0) || 0;
+      const totalCOGS = (cogsData as any[] | null)?.reduce((sum: number, item: any) => sum + (item.cost_price || 0), 0) || 0;
       const netRevenue = totalRevenue - totalRefunds;
       const salesCount = salesData?.length || 0;
       const effectiveSalesCount = salesCount - returnsCount;
 
       const newSummary = {
         totalRevenue: netRevenue,
+        totalCOGS,
+        grossProfit: netRevenue - totalCOGS,
         totalExpenses,
-        netProfit: netRevenue - totalExpenses,
+        netProfit: netRevenue - totalCOGS - totalExpenses,
         salesCount,
         returnsCount,
         avgSaleValue: effectiveSalesCount > 0 ? netRevenue / effectiveSalesCount : 0,
@@ -557,6 +578,10 @@ function FinancesPageContent() {
     }
   };
 
+  const grossMargin = summary.totalRevenue > 0
+    ? ((summary.grossProfit / summary.totalRevenue) * 100).toFixed(1)
+    : '0';
+
   const profitMargin = summary.totalRevenue > 0
     ? ((summary.netProfit / summary.totalRevenue) * 100).toFixed(1)
     : '0';
@@ -609,57 +634,61 @@ function FinancesPageContent() {
         onCustomRangeChange={setCustomRange}
       />
 
-      {/* Summary Cards - 2x2 on mobile */}
+      {/* Summary Cards */}
       <StatsCardGrid
         loading={loading}
         stats={[
           {
-            label: 'Total Revenue',
+            // 1. Money collected from customers
+            label: 'Revenue',
             value: <CountUp end={summary.totalRevenue} prefix="₹" />,
             icon: TrendingUp,
             iconColor: 'text-green-600',
             valueColor: 'text-green-600',
-            subtitle: `${summary.salesCount} sales · ${summary.returnsCount} returns`,
+            subtitle: `${summary.salesCount} bills · ${summary.returnsCount} returns`,
           },
           {
-            label: 'Total Expenses',
+            // 2. What the sold items cost to buy — expressed as gross profit so it's intuitive
+            label: 'Gross Profit',
+            value: <CountUp end={Math.abs(summary.grossProfit)} prefix={summary.grossProfit < 0 ? '-₹' : '₹'} />,
+            icon: TrendingUp,
+            iconColor: 'text-emerald-600',
+            valueColor: summary.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600',
+            subtitle: `${grossMargin}% margin · paid ₹${Math.round(summary.totalCOGS).toLocaleString()} for stock`,
+          },
+          {
+            // 3. Operational overhead (rent, electricity, staff, etc.)
+            label: 'Business Expenses',
             value: <CountUp end={summary.totalExpenses} prefix="₹" />,
             icon: TrendingDown,
             iconColor: 'text-red-600',
             valueColor: 'text-red-600',
-            subtitle: `${totalCount} expenses`,
+            subtitle: `${totalCount} recorded expenses`,
           },
           {
+            // 4. Final take-home after stock cost + overhead
             label: 'Net Profit',
             value: <CountUp end={Math.abs(summary.netProfit)} prefix={summary.netProfit < 0 ? '-₹' : '₹'} />,
             icon: DollarSign,
             iconColor: 'text-blue-600',
             valueColor: summary.netProfit >= 0 ? 'text-blue-600' : 'text-red-600',
-            subtitle: `${profitMargin}% margin`,
+            subtitle: `${profitMargin}% net margin · after all costs`,
           },
           {
-            label: 'Avg Sale Value',
+            // 5. Average value per bill
+            label: 'Avg Bill Value',
             value: <CountUp end={summary.avgSaleValue} prefix="₹" />,
             icon: CreditCard,
             iconColor: 'text-purple-600',
-            subtitle: 'Per transaction',
+            subtitle: 'Per bill (excl. returns)',
           },
           {
-            label: 'Inventory Value',
+            // 6. Value of unsold items still in the store
+            label: 'Unsold Stock',
             value: <CountUp end={summary.inventoryValue} prefix="₹" />,
             icon: Package,
             iconColor: 'text-orange-600',
-            subtitle: 'Available stock (at cost)',
-            colSpan: 2,
-          },
-          {
-            label: 'Cash Flow',
-            value: <CountUp end={Math.abs(summary.netProfit)} prefix={summary.netProfit >= 0 ? '+₹' : '-₹'} />,
-            icon: CreditCard,
-            iconColor: s.linkColor,
-            valueColor: summary.netProfit >= 0 ? 'text-green-600' : 'text-red-600',
-            subtitle: 'Revenue - Expenses',
-            colSpan: 2,
+            subtitle: 'Items still in store (at cost)',
           },
         ]}
       />

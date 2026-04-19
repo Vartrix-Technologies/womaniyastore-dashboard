@@ -15,6 +15,7 @@ export interface PendingSale {
     sizeName?: string; // for manual items
     taxRate?: number; // for manual items
     manualNote?: string; // for manual items
+    costPrice?: number; // buying price for profit calculation
   }>;
   paymentMethod: string;
   customerName?: string;
@@ -48,6 +49,7 @@ export interface CartItem {
   // Manual entry (Quick Sale) — item not in inventory
   isManualEntry?: boolean;
   manualNote?: string; // optional note for manual items
+  costPrice?: number; // buying price — from inventory for QR items, entered manually for quick-add
 }
 
 export interface ScanResult {

@@ -83,7 +83,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const FETCH_PROFILE_TIMEOUT_MS = 5_000;
 
 async function fetchProfileFromDb(userId: string, timeoutMs = FETCH_PROFILE_TIMEOUT_MS): Promise<Profile | null> {
-  authLog('fetchProfile:start', userId);
+  authLog('fetchProfile:start');
 
   const fetchPromise = supabase
     .from('profiles')
@@ -92,17 +92,17 @@ async function fetchProfileFromDb(userId: string, timeoutMs = FETCH_PROFILE_TIME
     .single()
     .then(({ data, error }) => {
       if (error) {
-        authLog('fetchProfile:error', error.message, 'userId=', userId);
+        authLog('fetchProfile:error');
         console.error('Error fetching profile:', error);
         return null;
       }
-      authLog('fetchProfile:ok', data?.role);
+      authLog('fetchProfile:ok');
       return data as Profile | null;
     });
 
   const timeoutPromise = new Promise<null>((resolve) => {
     setTimeout(() => {
-      authLog('fetchProfile:TIMEOUT after', timeoutMs, 'ms');
+      authLog('fetchProfile:TIMEOUT');
       resolve(null);
     }, timeoutMs);
   });
@@ -161,11 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
 
         const seq = ++authEventSeq.current;
-        authLog('onAuthStateChange', { event, seq, hasSession: !!session, userId: session?.user?.id });
+        authLog('onAuthStateChange', event);
 
         // Signed out or dead token
         if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-          authLog('clearing state', { event, seq });
+          authLog('clearing state');
           clearAuthState();
           return;
         }
@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // gets refreshed in the background anyway.
           const existing = profileRef.current || getCachedProfile(userId);
           if (existing) {
-            authLog('fast path: using existing profile', { event, role: existing.role, source: profileRef.current ? 'state' : 'cache', seq });
+            authLog('fast path: using existing profile');
             setProfile(existing);
             setLoading(false);
 
@@ -193,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             fetchProfileFromDb(userId).then((fresh) => {
               if (!mounted || seq !== authEventSeq.current) return;
               if (fresh) {
-                authLog('background refresh: updated profile', { role: fresh.role });
+                authLog('background refresh: updated profile');
                 setProfile(fresh);
                 setCachedProfile(userId, fresh);
               }
@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userProfile = await fetchProfileFromDb(userId);
           if (!mounted) return;
           if (seq !== authEventSeq.current) {
-            authLog('stale callback discarded', { seq, currentSeq: authEventSeq.current });
+            authLog('stale callback discarded');
             return;
           }
 
@@ -220,17 +220,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Timeout or error — last-resort cache check
             const fallback = getCachedProfile(userId);
             if (fallback) {
-              authLog('slow path: timeout but found cache', { role: fallback.role, seq });
+              authLog('slow path: timeout but found cache');
               setProfile(fallback);
             } else {
-              authLog('slow path: no profile found anywhere', { seq });
+              authLog('slow path: no profile found anywhere');
               setProfile(null);
             }
           }
           setLoading(false);
-          authLog('auth ready', { role: (userProfile || getCachedProfile(userId))?.role, seq });
+          authLog('auth ready');
         } else {
-          authLog('no session — clearing', { event, seq });
+          authLog('no session — clearing');
           clearAuthState();
         }
       }
@@ -263,15 +263,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Returns the profile so the caller can navigate immediately.
   // If fetchProfile times out, falls back to cached profile.
   async function signIn(email: string, password: string): Promise<Profile> {
-    authLog('signIn:start', email);
+    authLog('signIn:start');
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      authLog('signIn:error', error.message);
+      authLog('signIn:error');
       throw error;
     }
 
-    authLog('signIn:signInWithPassword ok', data.user?.id);
+    authLog('signIn:signInWithPassword ok');
 
     if (!data.user) {
       throw new Error('Sign-in succeeded but no user was returned.');
@@ -281,13 +281,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Fetch profile with timeout — don't hang forever
     let userProfile = await fetchProfileFromDb(userId, 5_000);
-    authLog('signIn:fetchProfile result', { profile: userProfile?.role ?? 'TIMEOUT/NULL' });
+    authLog('signIn:fetchProfile result');
 
     // If network timed out, try cached profile as last resort
     if (!userProfile) {
       const cached = getCachedProfile(userId);
       if (cached) {
-        authLog('signIn:using cached profile as fallback', { role: cached.role });
+        authLog('signIn:using cached profile as fallback');
         userProfile = cached;
       }
     }
@@ -307,7 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(userProfile);
     setLoading(false);
     setCachedProfile(userId, userProfile);
-    authLog('signIn:state set eagerly', { role: userProfile.role });
+    authLog('signIn:state set eagerly');
 
     return userProfile;
   }
@@ -355,7 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // User has been deactivated - sign them out
       signOut().then(() => {
         // Toast will show after redirect to login
-        console.log('User account deactivated - signed out');
+        authLog('User account deactivated - signed out');
       });
     }
   }, [loading, user, profile]);

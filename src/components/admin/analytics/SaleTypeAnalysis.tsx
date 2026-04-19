@@ -18,20 +18,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { appConfig } from '@/lib/config/app.config';
-
-const s = appConfig.styles;
 import { 
   Sparkles, 
   Tag, 
   Percent, 
   ShoppingBag,
   TrendingUp,
-  Crown,
   ArrowRight,
-  Users
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { supabase } from '@/lib/supabase';
+
+const s = appConfig.styles;
 
 interface SaleTypeData {
   type: string;
@@ -57,7 +55,6 @@ interface SaleTypeAnalysisProps {
 export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: SaleTypeAnalysisProps) {
   const [loading, setLoading] = useState(true);
   const [saleTypeData, setSaleTypeData] = useState<SaleTypeData[]>([]);
-  const [topCustomer, setTopCustomer] = useState<{ name: string; phone: string | null; orders: number; revenue: number } | null>(null);
   const [totals, setTotals] = useState({
     totalItems: 0,
     totalRevenue: 0,
@@ -81,9 +78,6 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
         .select(`
           id,
           created_at,
-          customer_name,
-          customer_phone,
-          total_amount,
           sale_items (
             id,
             original_price,
@@ -114,22 +108,7 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
       };
 
       // Aggregate by sale type
-      const customerMap: Record<string, { orders: number; revenue: number; phone: string | null }> = {};
-
       salesData?.forEach((sale: any) => {
-        // Track customer orders
-        const customerName = sale.customer_name;
-        if (customerName) {
-          if (!customerMap[customerName]) {
-            customerMap[customerName] = { orders: 0, revenue: 0, phone: null };
-          }
-          customerMap[customerName].orders += 1;
-          customerMap[customerName].revenue += sale.total_amount || 0;
-          if (sale.customer_phone) {
-            customerMap[customerName].phone = sale.customer_phone;
-          }
-        }
-
         sale.sale_items?.forEach((item: any) => {
           const originalPrice = item.original_price || 0;
           const finalPrice = item.final_price || 0;
@@ -214,16 +193,6 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
         .reduce((sum, t) => sum + t.itemsSold, 0);
 
       setSaleTypeData(saleTypes);
-
-      // Find top customer by order count
-      const customerEntries = Object.entries(customerMap);
-      if (customerEntries.length > 0) {
-        const [topName, topData] = customerEntries.sort((a, b) => b[1].orders - a[1].orders)[0];
-        setTopCustomer({ name: topName, phone: topData.phone, orders: topData.orders, revenue: topData.revenue });
-      } else {
-        setTopCustomer(null);
-      }
-
       setTotals({
         totalItems,
         totalRevenue,
@@ -257,47 +226,6 @@ export function SaleTypeAnalysis({ shopId, startDate, endDate, dateFilter }: Sal
 
   return (
     <div className="space-y-6">
-      {/* Top Customer Highlight */}
-      {topCustomer && (
-        <Card className="border-violet-200 dark:border-violet-800 bg-gradient-to-br from-violet-50/50 dark:from-violet-950/30 to-transparent">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-              <CardTitle className="text-sm font-semibold">Top Customer</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-xl font-bold truncate">{topCustomer.name}</div>
-                {topCustomer.phone && (
-                  <div className="text-sm text-muted-foreground">{topCustomer.phone}</div>
-                )}
-                <div className="text-sm text-muted-foreground">
-                  {topCustomer.orders} orders placed
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{formatCurrency(topCustomer.revenue)}</div>
-                <div className="text-sm text-muted-foreground tabular-nums">
-                  total spend
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 pt-2 border-t border-violet-200/50 dark:border-violet-800/50">
-              <Link 
-                href="#"
-                className="flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 hover:opacity-80 transition-opacity"
-              >
-                <Users className="h-3.5 w-3.5" />
-                Customer Insights
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 ml-1">Coming Soon</Badge>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Sale Type Cards */}
       <Card>
         <CardHeader>

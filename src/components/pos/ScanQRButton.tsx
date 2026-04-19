@@ -43,12 +43,27 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
     return 'environment';
   });
 
+  // Forcefully kill every active camera track so the indicator light turns off.
+  // Html5Qrcode.stop() alone doesn't always release the MediaStream on mobile.
+  const killCameraTracks = () => {
+    const videoEl = document.querySelector<HTMLVideoElement>('#qr-reader video');
+    if (videoEl?.srcObject instanceof MediaStream) {
+      videoEl.srcObject.getTracks().forEach((t) => t.stop());
+      videoEl.srcObject = null;
+    }
+    // Also enumerate all active tracks via the API, in case the video element
+    // hasn't been attached yet (e.g. start() errored mid-way).
+    navigator.mediaDevices?.enumerateDevices?.(); // no-op but flushes pending states on some browsers
+  };
+
   useEffect(() => {
     return () => {
       // Cleanup scanner on unmount
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
       }
+      killCameraTracks();
     };
   }, []);
 
@@ -105,6 +120,9 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
         console.error('Error stopping scanner:', error);
       }
     }
+    // Explicitly stop all MediaStream tracks so the camera indicator light
+    // turns off — Html5Qrcode.stop() alone doesn't always release the hardware.
+    killCameraTracks();
     setScanning(false);
     setLoading(false);
     // NOTE: processingRef is NOT reset here — only onScanSuccess's finally block
@@ -124,6 +142,7 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
       } catch {}
       scannerRef.current = null;
     }
+    killCameraTracks();
 
     setFacingMode(newMode);
     localStorage.setItem(CAMERA_FACING_KEY, newMode);

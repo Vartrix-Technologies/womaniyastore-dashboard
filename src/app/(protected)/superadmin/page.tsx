@@ -86,7 +86,7 @@ export default function SuperadminDashboard() {
         return;
       }
 
-      const db = await openDB(appConfig.internal.idbName, 2);
+      const db = await openDB(appConfig.internal.idbName, 3);
       await db.close();
       setIndexedDBStatus('healthy');
     } catch (error) {

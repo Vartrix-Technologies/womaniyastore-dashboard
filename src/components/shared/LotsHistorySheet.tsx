@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '@/components/ui/sheet';
@@ -404,8 +404,24 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
   // When a child Dialog/AlertDialog is open on top of the Sheet, Radix fires
   // "interact outside" on the Sheet when the child closes.  Prevent that from
   // dismissing the Sheet.
-  const hasChildDialogOpen = !!(editingLot || editingItem || viewingItem || deletingLot || deletingItem);
-  const blockSheetDismiss = (e: Event) => { if (hasChildDialogOpen) e.preventDefault(); };
+  //
+  // We use a ref (not derived state) with a short grace period: when a child
+  // closes, React re-renders and flips state to null *before* Radix fires
+  // onInteractOutside on the Sheet.  The timeout keeps the ref true for one
+  // more tick so the Sheet ignores that spurious event.
+  const childDialogBlockRef = useRef(false);
+  useEffect(() => {
+    const anyOpen = !!(editingLot || editingItem || viewingItem || deletingLot || deletingItem);
+    if (anyOpen) {
+      childDialogBlockRef.current = true;
+    } else {
+      // Grace period: keep blocking for 80 ms after the last child closes so
+      // Radix's exit-animation pointer/focus events don't dismiss the Sheet.
+      const id = setTimeout(() => { childDialogBlockRef.current = false; }, 80);
+      return () => clearTimeout(id);
+    }
+  }, [editingLot, editingItem, viewingItem, deletingLot, deletingItem]);
+  const blockSheetDismiss = (e: Event) => { if (childDialogBlockRef.current) e.preventDefault(); };
 
   return (
     <>

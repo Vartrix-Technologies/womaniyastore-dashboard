@@ -214,7 +214,7 @@ export function ProcessReturnDialog({ open, onOpenChange, onSuccess }: ProcessRe
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto !top-3 !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2">
         <DialogHeader>
           <DialogTitle>Process Return</DialogTitle>
           <DialogDescription>

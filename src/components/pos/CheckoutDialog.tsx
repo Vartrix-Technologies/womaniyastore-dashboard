@@ -104,6 +104,7 @@ export function CheckoutDialog({
           qr_code: item.isManualEntry ? '' : item.qrCode,
           original_price: item.originalPrice,
           final_price: item.finalPrice,
+          cost_price: item.costPrice,
           discount_reason: item.discountReason,
           // Sale information from cart
           sold_on_sale: item.soldOnSale || false,
@@ -157,6 +158,7 @@ export function CheckoutDialog({
               qrCode: item.qr_code,
               originalPrice: item.original_price,
               finalPrice: item.final_price,
+              costPrice: item.cost_price,
               discountReason: item.discount_reason,
               soldOnSale: item.sold_on_sale,
               saleType: item.sale_type,
@@ -185,6 +187,7 @@ export function CheckoutDialog({
             qrCode: item.qr_code,
             originalPrice: item.original_price,
             finalPrice: item.final_price,
+            costPrice: item.cost_price,
             discountReason: item.discount_reason,
             soldOnSale: item.sold_on_sale,
             saleType: item.sale_type,

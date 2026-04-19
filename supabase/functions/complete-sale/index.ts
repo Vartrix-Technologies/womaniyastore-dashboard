@@ -9,6 +9,7 @@ interface SaleItem {
   qr_code: string
   original_price: number
   final_price: number
+  cost_price?: number
   discount_reason?: string
   sold_on_sale?: boolean
   sale_type?: string // 'festival' | 'clearance' | 'promotion'
@@ -385,6 +386,7 @@ Deno.serve(async (req: Request) => {
           inventory_item_id: data.inventory_item.id,
           original_price: data.sale_item.original_price,
           final_price: data.sale_item.final_price,
+          cost_price: data.inventory_item.cost_price ?? null,
           tax_amount: itemTax,
           discount_reason: data.sale_item.discount_reason || null,
           sold_on_sale: data.sale_item.sold_on_sale || false, // NEW
@@ -450,6 +452,7 @@ Deno.serve(async (req: Request) => {
           inventory_item_id: null,
           original_price: item.original_price,
           final_price: item.final_price,
+          cost_price: item.cost_price ?? null,
           tax_amount: itemTax,
           discount_reason: discountNote,
           sold_on_sale: item.sold_on_sale || false,

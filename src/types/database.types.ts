@@ -793,6 +793,7 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          cost_price: number | null
           created_at: string
           discount_reason: string | null
           final_price: number
@@ -808,6 +809,7 @@ export type Database = {
           size_name: string | null
         }
         Insert: {
+          cost_price?: number | null
           created_at?: string
           discount_reason?: string | null
           final_price: number
@@ -823,6 +825,7 @@ export type Database = {
           size_name?: string | null
         }
         Update: {
+          cost_price?: number | null
           created_at?: string
           discount_reason?: string | null
           final_price?: number

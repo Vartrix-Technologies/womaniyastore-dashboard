@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { fetchSales, getSalesStats } from '@/lib/api/sales';
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter';
 import Link from 'next/link';
-import { Search, Eye, Download, ArrowLeft, Receipt, BarChart3, Users, History } from 'lucide-react';
+import { Search, Eye, Download, ArrowLeft, Receipt, BarChart3, Users, History, BrainCircuit } from 'lucide-react';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { formatCurrency, formatDate, formatTime } from '@/lib/formatters';
 import { exportToCSV, type DateFilterType } from '@/lib/utils';
@@ -24,7 +24,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { PaginationControls } from '@/components/shared/PaginationControls';
 import { FilterChips, type FilterChip } from '@/components/shared/FilterChips';
 import { BillPreviewDialog } from '@/components/shared/BillPreviewDialog';
-import { VendorPerformance, CategoryPerformance, SaleTypeAnalysis } from '@/components/admin/analytics';
+import { VendorPerformance, CategoryPerformance, SaleTypeAnalysis, RevenueTrendChart, PaymentMethodBreakdown, TopCustomers, InsightsPanel, RevenueHeatmap, MarginByCategoryChart, CohortRetentionGrid } from '@/components/admin/analytics';
 import type { SaleForList } from '@/types';
 import { toast } from 'sonner';
 import { appConfig } from '@/lib/config/app.config';
@@ -56,6 +56,8 @@ function SalesPageContent() {
   // Initialize state from URL params
   const initialTab = searchParams.get('tab') || 'transactions';
   const initialFilter = (searchParams.get('filter') as DateFilterType) || 'week';
+  const initialSection = searchParams.get('section') || null;
+  const hasScrolled = useRef(false);
   
   const [sales, setSales] = useState<SaleForList[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +99,16 @@ function SalesPageContent() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
+
+  // Auto-scroll to a specific BI section when deep-linked from homepage
+  useEffect(() => {
+    if (initialSection && activeTab === 'analytics' && !hasScrolled.current) {
+      hasScrolled.current = true;
+      requestAnimationFrame(() => {
+        document.getElementById(`bi-${initialSection}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [activeTab, initialSection]);
 
   // Handle date filter change
   const handleDateFilterChange = (filter: DateFilterType) => {
@@ -612,34 +624,91 @@ function SalesPageContent() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-1">
-                <BarChart3 className={`h-4 w-4 ${s.linkColor}`} />
-                Sales Analytics
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Analyze your sales performance by category, sale type, and trends
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
           {profile?.shop_id && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <CategoryPerformance 
-                shopId={profile.shop_id as string} 
-                startDate={startDateISO} 
-                endDate={null} 
-              />
-              <SaleTypeAnalysis 
-                shopId={profile.shop_id as string} 
-                startDate={startDateISO} 
-                endDate={null}
+            <>
+              {/* Revenue Trend — full width hero chart */}
+              <RevenueTrendChart
+                shopId={profile.shop_id as string}
+                startDate={startDateISO}
+                endDate={endDateISO}
                 dateFilter={dateFilter}
               />
-            </div>
-          )
-        }</TabsContent>
+
+              {/* Row 2: Payment methods + Top customers */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <PaymentMethodBreakdown
+                  shopId={profile.shop_id as string}
+                  startDate={startDateISO}
+                  endDate={endDateISO}
+                />
+                <TopCustomers
+                  shopId={profile.shop_id as string}
+                  startDate={startDateISO}
+                  endDate={endDateISO}
+                />
+              </div>
+
+              {/* Row 3: Category breakdown + Sale type analysis */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <CategoryPerformance
+                  shopId={profile.shop_id as string}
+                  startDate={startDateISO}
+                  endDate={endDateISO}
+                />
+                <SaleTypeAnalysis
+                  shopId={profile.shop_id as string}
+                  startDate={startDateISO}
+                  endDate={endDateISO}
+                  dateFilter={dateFilter}
+                />
+              </div>
+
+              {/* ── Business Intelligence ─────────────────────── */}
+              <div id="bi-intelligence" className="pt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 rounded bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white">
+                    <BrainCircuit className="h-4 w-4" />
+                  </div>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Business Intelligence
+                  </h2>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </div>
+
+              {/* Automated Insights */}
+              <section id="bi-insights" className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Automated Insights
+                </h3>
+                <InsightsPanel shopId={profile.shop_id as string} />
+              </section>
+
+              {/* Revenue Heatmap */}
+              <section id="bi-heatmap" className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  When Do You Sell?
+                </h3>
+                <RevenueHeatmap
+                  shopId={profile.shop_id as string}
+                  startDate={startDateISO}
+                  endDate={endDateISO}
+                />
+              </section>
+
+              {/* Long-Term Trends */}
+              <section id="bi-cohorts" className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Long-Term Trends
+                </h3>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <MarginByCategoryChart shopId={profile.shop_id as string} monthsBack={6} />
+                  <CohortRetentionGrid shopId={profile.shop_id as string} />
+                </div>
+              </section>
+            </>
+          )}
+        </TabsContent>
 
         {/* Vendors Tab */}
         <TabsContent value="vendors" className="space-y-6">

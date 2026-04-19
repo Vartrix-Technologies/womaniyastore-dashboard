@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, Download, ChevronDown } from 'lucide-react';
 import { formatCurrency, formatDate, formatTime } from '@/lib/formatters';
 import { appConfig } from '@/lib/config';
+import { useThemeColor } from '@/context/ThemeColorContext';
 
 const s = appConfig.styles;
 import type { Sale, SaleForList } from '@/types';
@@ -36,6 +37,30 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
   const [fullSaleData, setFullSaleData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const billContentRef = useRef<HTMLDivElement>(null);
+  const { palette } = useThemeColor();
+
+  // Bill preview colors derived from active palette
+  const bc = {
+    bg: palette.colors[50],
+    bgSoft: palette.colors[50],
+    headerFrom: palette.colors[900],
+    headerTo: palette.colors[700],
+    headerDivider: palette.colors[800],
+    textWhite: '#ffffff',
+    textOnHeaderSoft: palette.colors[300],
+    textOnHeaderMuted: palette.colors[400],
+    textOnHeaderLight: palette.colors[100],
+    accent: palette.colors[700],
+    accentMuted: palette.colors[400],
+    border: palette.colors[100],
+    borderAccent: palette.colors[300],
+    textDark: palette.colors[950],
+    textMuted: palette.colors[500],
+    textAccent: palette.colors[800],
+    logoBg: palette.colors[50],
+    logoBorder: palette.colors[300],
+    footerLabel: palette.colors[200],
+  };
 
   useEffect(() => {
     if (sale?.id) {
@@ -1182,7 +1207,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
         {/* Header row: title left, close button right (Radix auto-renders the X inside DialogContent) */}
-        <DialogHeader className="no-print shrink-0 flex flex-row items-center px-4 py-3 border-b bg-white">
+        <DialogHeader className="no-print shrink-0 flex flex-row items-center px-4 py-3 border-b bg-background">
           <DialogTitle className="text-sm font-semibold text-muted-foreground tracking-wide flex-1">
             Invoice&nbsp;<span className="font-mono text-foreground">{billNumber}</span>
           </DialogTitle>
@@ -1238,21 +1263,21 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
           <div className="print-content force-light" ref={billContentRef}>
             {/* Bill Content — rose brand design, matches downloadable image */}
-            <div className="rounded-xl overflow-hidden" style={{boxShadow: '0 4px 24px rgba(94,26,56,0.14)', background: '#fdf0f3'}}>
+            <div className="rounded-xl overflow-hidden" style={{boxShadow: `0 4px 24px ${bc.headerFrom}24`, background: bc.bg}}>
 
               {/* ── Rose header ── */}
-              <div style={{background: 'linear-gradient(135deg,#5e1a38 0%,#8c2e56 55%,#5e1a38 100%)', padding: '24px 24px 18px'}}>
+              <div style={{background: `linear-gradient(135deg,${bc.headerFrom} 0%,${bc.headerTo} 55%,${bc.headerFrom} 100%)`, padding: '24px 24px 18px'}}>
                 {/* Brand row */}
                 <div className="flex items-center justify-between" style={{marginBottom: '18px'}}>
                   <div className="flex-1">
                     <h1 style={{fontSize: '22px', fontWeight: 800, letterSpacing: '3px', color: '#ffffff', lineHeight: 1, margin: 0}}>
                       {appConfig.billing.receiptHeader}
                     </h1>
-                    <p style={{fontSize: '10px', color: '#e8a0b8', marginTop: '5px', letterSpacing: '2.5px', fontWeight: 500, margin: '5px 0 0'}}>
+                    <p style={{fontSize: '10px', color: bc.textOnHeaderSoft, marginTop: '5px', letterSpacing: '2.5px', fontWeight: 500, margin: '5px 0 0'}}>
                       FASHION FORWARD. ALWAYS.
                     </p>
                     {shopDetails && (
-                      <div style={{fontSize: '11px', color: '#d4869f', marginTop: '8px', lineHeight: 1.6}}>
+                      <div style={{fontSize: '11px', color: bc.textOnHeaderMuted, marginTop: '8px', lineHeight: 1.6}}>
                         {shopDetails.address && <div>{shopDetails.address}</div>}
                         {shopDetails.phone && <div>{shopDetails.phone}</div>}
                         {shopDetails.gst_number && <div>GST: {shopDetails.gst_number}</div>}
@@ -1261,7 +1286,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                   </div>
                   {/* Logo on cream background so black mark pops */}
                   <div className="flex-shrink-0" style={{marginLeft: '20px'}}>
-                    <div style={{width: '68px', height: '68px', background: '#fff5f7', borderRadius: '12px', border: '2px solid #f9a8c4', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '5px'}}>
+                    <div style={{width: '68px', height: '68px', background: bc.logoBg, borderRadius: '12px', border: `2px solid ${bc.logoBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '5px'}}>
                       <img
                         src={appConfig.billing.logoPath}
                         alt={appConfig.billing.logoAlt}
@@ -1272,40 +1297,40 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                           if (s) s.style.display = 'block';
                         }}
                       />
-                      <span style={{display: 'none', fontSize: '1.75rem', fontWeight: 800, color: '#5e1a38'}}>
+                      <span style={{display: 'none', fontSize: '1.75rem', fontWeight: 800, color: bc.headerFrom}}>
                         {appConfig.brand.logoLetter}
                       </span>
                     </div>
                   </div>
                 </div>
                 {/* Invoice + date strip */}
-                <div className="flex justify-between items-start" style={{borderTop: '1px solid #7a2547', paddingTop: '16px'}}>
+                <div className="flex justify-between items-start" style={{borderTop: `1px solid ${bc.headerDivider}`, paddingTop: '16px'}}>
                   <div>
-                    <p style={{fontSize: '9px', color: '#e8a0b8', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, margin: '0 0 4px'}}>Invoice Number</p>
+                    <p style={{fontSize: '9px', color: bc.textOnHeaderSoft, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, margin: '0 0 4px'}}>Invoice Number</p>
                     <p style={{fontSize: '17px', fontWeight: 700, color: '#ffffff', fontFamily: "'Courier New', monospace", letterSpacing: '1.5px', margin: 0}}>{billNumber}</p>
                   </div>
                   <div className="text-right">
-                    <p style={{fontSize: '9px', color: '#e8a0b8', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, margin: '0 0 4px'}}>Date</p>
-                    <p style={{fontSize: '13px', fontWeight: 600, color: '#ffe4ef', margin: 0}}>{formatDate(displaySale.created_at)}</p>
-                    <p style={{fontSize: '11px', color: '#d4869f', marginTop: '3px'}}>{formatTime(displaySale.created_at)}</p>
+                    <p style={{fontSize: '9px', color: bc.textOnHeaderSoft, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600, margin: '0 0 4px'}}>Date</p>
+                    <p style={{fontSize: '13px', fontWeight: 600, color: bc.textOnHeaderLight, margin: 0}}>{formatDate(displaySale.created_at)}</p>
+                    <p style={{fontSize: '11px', color: bc.textOnHeaderMuted, marginTop: '3px'}}>{formatTime(displaySale.created_at)}</p>
                   </div>
                 </div>
               </div>
 
               {/* ── Customer ── */}
               {(displaySale.customer_name || displaySale.customer_phone) && (
-                <div style={{padding: '12px 24px', background: '#fff5f7', borderBottom: '1px solid #fce4ec'}}>
-                  <p style={{fontSize: '9px', fontWeight: 700, color: '#c4869c', textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 5px'}}>Billed To</p>
-                  {displaySale.customer_name && <p style={{fontSize: '15px', fontWeight: 600, color: '#3d0a19', margin: 0}}>{displaySale.customer_name}</p>}
-                  {displaySale.customer_phone && <p style={{fontSize: '12px', color: '#9a6070', marginTop: '2px'}}>{displaySale.customer_phone}</p>}
+                <div style={{padding: '12px 24px', background: bc.bgSoft, borderBottom: `1px solid ${bc.border}`}}>
+                  <p style={{fontSize: '9px', fontWeight: 700, color: bc.accentMuted, textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 5px'}}>Billed To</p>
+                  {displaySale.customer_name && <p style={{fontSize: '15px', fontWeight: 600, color: bc.textDark, margin: 0}}>{displaySale.customer_name}</p>}
+                  {displaySale.customer_phone && <p style={{fontSize: '12px', color: bc.textMuted, marginTop: '2px'}}>{displaySale.customer_phone}</p>}
                 </div>
               )}
 
               {/* ── Items ── */}
               <div style={{padding: '18px 24px 10px', background: '#ffffff'}}>
-                <div className="flex justify-between items-center" style={{paddingBottom: '9px', borderBottom: '2px solid #8c2e56', marginBottom: '2px'}}>
-                  <span style={{fontSize: '9px', fontWeight: 700, color: '#8c2e56', textTransform: 'uppercase', letterSpacing: '2px'}}>Description</span>
-                  <span style={{fontSize: '9px', fontWeight: 700, color: '#8c2e56', textTransform: 'uppercase', letterSpacing: '2px'}}>Amount</span>
+                <div className="flex justify-between items-center" style={{paddingBottom: '9px', borderBottom: `2px solid ${bc.accent}`, marginBottom: '2px'}}>
+                  <span style={{fontSize: '9px', fontWeight: 700, color: bc.accent, textTransform: 'uppercase', letterSpacing: '2px'}}>Description</span>
+                  <span style={{fontSize: '9px', fontWeight: 700, color: bc.accent, textTransform: 'uppercase', letterSpacing: '2px'}}>Amount</span>
                 </div>
                 {saleItems.map((item: any, index: number) => {
                   const hasSaleType = item.sold_on_sale && item.sale_type;
@@ -1315,10 +1340,10 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                     : `${item.category_name || 'Item'} — ${item.size_name || 'One Size'}`;
                   const qrCode = item.inventory_item_id ? (item.inventory_items?.qr_codes?.code || item.qr_code || '') : '';
                   return (
-                    <div key={index} className="flex justify-between items-start" style={{padding: '11px 0', borderBottom: isLastItem ? 'none' : '1px solid #fce4ec'}}>
+                    <div key={index} className="flex justify-between items-start" style={{padding: '11px 0', borderBottom: isLastItem ? 'none' : `1px solid ${bc.border}`}}>
                       <div className="flex-1" style={{paddingRight: '12px'}}>
-                        <p style={{fontSize: '14px', fontWeight: 600, color: '#3d0a19', lineHeight: 1.4, margin: 0}}>{itemName}</p>
-                        {qrCode && <p style={{fontSize: '10px', color: '#c4869c', fontFamily: "'Courier New', monospace", marginTop: '2px'}}>{qrCode}</p>}
+                        <p style={{fontSize: '14px', fontWeight: 600, color: bc.textDark, lineHeight: 1.4, margin: 0}}>{itemName}</p>
+                        {qrCode && <p style={{fontSize: '10px', color: bc.accentMuted, fontFamily: "'Courier New', monospace", marginTop: '2px'}}>{qrCode}</p>}
                         {hasSaleType && (
                           <span style={{
                             display: 'inline-block', fontSize: '9px', fontWeight: 700,
@@ -1338,12 +1363,12 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                       <div className="flex-shrink-0 text-right">
                         {item.original_price !== item.final_price ? (
                           <>
-                            <p style={{fontSize: '11px', color: '#c4869c', textDecoration: 'line-through', margin: 0}}>{formatCurrency(item.original_price)}</p>
+                            <p style={{fontSize: '11px', color: bc.accentMuted, textDecoration: 'line-through', margin: 0}}>{formatCurrency(item.original_price)}</p>
                             <p style={{fontSize: '16px', fontWeight: 700, color: '#16a34a', margin: 0}}>{formatCurrency(item.final_price)}</p>
                             <p style={{fontSize: '10px', color: '#ea580c', margin: 0}}>–{formatCurrency(item.original_price - item.final_price)}</p>
                           </>
                         ) : (
-                          <p style={{fontSize: '16px', fontWeight: 700, color: '#3d0a19', margin: 0}}>{formatCurrency(item.final_price)}</p>
+                          <p style={{fontSize: '16px', fontWeight: 700, color: bc.textDark, margin: 0}}>{formatCurrency(item.final_price)}</p>
                         )}
                       </div>
                     </div>
@@ -1352,34 +1377,34 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
               </div>
 
               {/* ── Totals ── */}
-              <div style={{margin: '8px 16px 16px', background: '#fff5f7', borderRadius: '14px', padding: '14px 16px 16px', border: '1px solid #fce4ec'}}>
+              <div style={{margin: '8px 16px 16px', background: bc.bgSoft, borderRadius: '14px', padding: '14px 16px 16px', border: `1px solid ${bc.border}`}}>
                 {displaySale.subtotal_amount !== displaySale.total_amount && (
                   <div className="flex justify-between items-center" style={{fontSize: '13px', marginBottom: '8px'}}>
-                    <span style={{color: '#9a6070'}}>Subtotal</span>
-                    <span style={{fontWeight: 600, color: '#3d0a19'}}>{formatCurrency(displaySale.subtotal_amount)}</span>
+                    <span style={{color: bc.textMuted}}>Subtotal</span>
+                    <span style={{fontWeight: 600, color: bc.textDark}}>{formatCurrency(displaySale.subtotal_amount)}</span>
                   </div>
                 )}
                 {displaySale.total_discount > 0 && (
                   <div className="flex justify-between items-center" style={{fontSize: '13px', marginBottom: '8px'}}>
-                    <span style={{color: '#9a6070'}}>Discount</span>
+                    <span style={{color: bc.textMuted}}>Discount</span>
                     <span style={{fontWeight: 600, color: '#ea580c'}}>–{formatCurrency(displaySale.total_discount)}</span>
                   </div>
                 )}
                 {displaySale.total_tax > 0 && (
                   <div className="flex justify-between items-center" style={{fontSize: '13px', marginBottom: '8px'}}>
-                    <span style={{color: '#9a6070'}}>GST ({shopDetails?.tax_rate || 5}%)</span>
-                    <span style={{fontWeight: 600, color: '#3d0a19'}}>{formatCurrency(displaySale.total_tax)}</span>
+                    <span style={{color: bc.textMuted}}>GST ({shopDetails?.tax_rate || 5}%)</span>
+                    <span style={{fontWeight: 600, color: bc.textDark}}>{formatCurrency(displaySale.total_tax)}</span>
                   </div>
                 )}
                 {/* Total bar */}
-                <div className="flex justify-between items-center" style={{background: 'linear-gradient(135deg,#5e1a38,#8c2e56)', borderRadius: '10px', padding: '13px 16px', marginTop: '8px'}}>
-                  <span style={{color: '#fecdd3', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px'}}>Total Paid</span>
+                <div className="flex justify-between items-center" style={{background: `linear-gradient(135deg,${bc.headerFrom},${bc.headerTo})`, borderRadius: '10px', padding: '13px 16px', marginTop: '8px'}}>
+                  <span style={{color: bc.footerLabel, fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1.5px'}}>Total Paid</span>
                   <span style={{color: '#ffffff', fontSize: '22px', fontWeight: 800, letterSpacing: '0.5px'}}>{formatCurrency(displaySale.total_amount)}</span>
                 </div>
                 {/* Payment method */}
-                <div className="flex justify-between items-center" style={{marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #fce4ec'}}>
-                  <span style={{fontSize: '11px', color: '#9a6070'}}>Payment Method</span>
-                  <span style={{fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#7c1342', letterSpacing: '0.5px'}}>{displaySale.payment_method}</span>
+                <div className="flex justify-between items-center" style={{marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${bc.border}`}}>
+                  <span style={{fontSize: '11px', color: bc.textMuted}}>Payment Method</span>
+                  <span style={{fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: bc.textAccent, letterSpacing: '0.5px'}}>{displaySale.payment_method}</span>
                 </div>
               </div>
 
@@ -1413,11 +1438,11 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
               )}
 
               {/* ── Footer ── */}
-              <div style={{background: 'linear-gradient(135deg,#5e1a38,#8c2e56)', padding: '22px 24px', textAlign: 'center'}}>
+              <div style={{background: `linear-gradient(135deg,${bc.headerFrom},${bc.headerTo})`, padding: '22px 24px', textAlign: 'center'}}>
                 <p style={{fontSize: '15px', fontWeight: 700, color: '#ffffff', margin: '0 0 5px'}}>Thank you for shopping with us!</p>
-                <p style={{fontSize: '11px', color: '#e8a0b8', letterSpacing: '0.5px', margin: '0 0 16px'}}>We look forward to seeing you again.</p>
-                <div style={{display: 'inline-block', border: '1px dashed #7a2547', padding: '6px 20px', borderRadius: '6px'}}>
-                  <span style={{fontFamily: "'Courier New', monospace", fontSize: '11px', color: '#d4869f', letterSpacing: '2px'}}>{billNumber}</span>
+                <p style={{fontSize: '11px', color: bc.textOnHeaderSoft, letterSpacing: '0.5px', margin: '0 0 16px'}}>We look forward to seeing you again.</p>
+                <div style={{display: 'inline-block', border: `1px dashed ${bc.headerDivider}`, padding: '6px 20px', borderRadius: '6px'}}>
+                  <span style={{fontFamily: "'Courier New', monospace", fontSize: '11px', color: bc.textOnHeaderMuted, letterSpacing: '2px'}}>{billNumber}</span>
                 </div>
               </div>
 

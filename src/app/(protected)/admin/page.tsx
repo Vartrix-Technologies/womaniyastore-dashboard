@@ -444,7 +444,7 @@ export default function AdminDashboard() {
         );
       })}
 
-      {/* AI Analytics — Coming Soon */}
+      {/* Business Intelligence */}
       <div className="space-y-1.5 lg:space-y-2.5 py-1.5 lg:py-2">
         {/* Section header */}
         <div className="flex items-center gap-1.5 lg:gap-2">
@@ -452,24 +452,43 @@ export default function AdminDashboard() {
             <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
           </div>
           <h2 className="text-xs lg:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            AI Analytics
+            Business Intelligence
           </h2>
-          <span className="ml-auto text-[10px] lg:text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-950/40 dark:text-fuchsia-400">
-            Coming Soon
-          </span>
         </div>
 
-        {/* Placeholder cards */}
+        {/* Real navigation cards */}
         <div className="grid grid-cols-3 gap-1.5 md:gap-2 lg:gap-3">
           {[
-            { title: 'Smart Insights', description: 'AI-powered trends', icon: BrainCircuit, gradient: 'from-fuchsia-500 to-purple-600' },
-            { title: 'Demand Forecast', description: 'Predict what sells', icon: TrendingUp, gradient: 'from-violet-500 to-indigo-600' },
-            { title: 'Loss Prevention', description: 'Anomaly detection', icon: TrendingDown, gradient: 'from-rose-500 to-pink-600' },
+            {
+              title: 'Smart Insights',
+              description: 'Revenue trends & alerts',
+              icon: BrainCircuit,
+              gradient: 'from-fuchsia-500 to-purple-600',
+              href: '/admin/sales?tab=analytics&section=intelligence',
+            },
+            {
+              title: 'Sales Heatmap',
+              description: 'When customers visit',
+              icon: TrendingUp,
+              gradient: 'from-violet-500 to-indigo-600',
+              href: '/admin/sales?tab=analytics&section=intelligence',
+            },
+            {
+              title: 'Customer Cohorts',
+              description: 'Retention over time',
+              icon: TrendingDown,
+              gradient: 'from-rose-500 to-pink-600',
+              href: '/admin/sales?tab=analytics&section=intelligence',
+            },
           ].map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.title} className="rounded-lg border shadow-sm h-full p-2 pt-3 md:p-3 lg:p-4 flex flex-col items-center text-center gap-1.5 lg:gap-2.5 sm:flex-row sm:text-left bg-card opacity-50 cursor-default">
-                <div className={`p-1.5 lg:p-2.5 rounded-md bg-gradient-to-br ${card.gradient} text-white shrink-0`}>
+              <Link
+                key={card.title}
+                href={card.href}
+                className="rounded-lg border shadow-sm h-full p-2 pt-3 md:p-3 lg:p-4 flex flex-col items-center text-center gap-1.5 lg:gap-2.5 sm:flex-row sm:text-left bg-card hover:bg-muted/50 hover:shadow-md transition-all group"
+              >
+                <div className={`p-1.5 lg:p-2.5 rounded-md bg-gradient-to-br ${card.gradient} text-white shrink-0 group-hover:scale-105 transition-transform`}>
                   <Icon className="h-4 w-4 lg:h-6 lg:w-6" />
                 </div>
                 <div className="min-w-0 w-full">
@@ -480,7 +499,7 @@ export default function AdminDashboard() {
                     {card.description}
                   </p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

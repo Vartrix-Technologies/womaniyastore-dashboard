@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PickerDialog } from '@/components/shared/PickerDialog';
-import { Zap, Plus, Loader2, ChevronsUpDown, Settings2 } from 'lucide-react';
+import { Zap, Plus, Loader2, ChevronsUpDown, Settings2, Copy } from 'lucide-react';
 import type { CartItem } from '@/types/pos.types';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -47,6 +47,7 @@ export function QuickAddItemDialog({
   const [categoryName, setCategoryName] = useState('');
   const [sizeName, setSizeName] = useState('');
   const [price, setPrice] = useState('');
+  const [costPrice, setCostPrice] = useState('');
   const [taxRate, setTaxRate] = useState(String(DEFAULT_TAX_RATE));
   const [note, setNote] = useState('');
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -133,12 +134,17 @@ export function QuickAddItemDialog({
 
   const handleAdd = useCallback(() => {
     const priceNum = parseFloat(price);
+    const costPriceNum = parseFloat(costPrice);
     if (!categoryName) {
       toast.error('Please select or create a category');
       return;
     }
     if (!priceNum || priceNum <= 0) {
-      toast.error('Please enter a valid price');
+      toast.error('Please enter a valid selling price');
+      return;
+    }
+    if (!costPriceNum || costPriceNum <= 0) {
+      toast.error('Please enter a valid cost price');
       return;
     }
 
@@ -152,6 +158,7 @@ export function QuickAddItemDialog({
       size: sizeName || 'N/A',
       originalPrice: priceNum,
       finalPrice: priceNum,
+      costPrice: costPriceNum,
       taxRate: taxRateNum,
       lotId: '',
       isManualEntry: true,
@@ -160,7 +167,7 @@ export function QuickAddItemDialog({
 
     onAddToCart(item);
     handleClose();
-  }, [categoryName, sizeName, price, taxRate, note, onAddToCart]);
+  }, [categoryName, sizeName, price, costPrice, taxRate, note, onAddToCart]);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -169,6 +176,7 @@ export function QuickAddItemDialog({
     setCategoryName('');
     setSizeName('');
     setPrice('');
+    setCostPrice('');
     setTaxRate(String(DEFAULT_TAX_RATE));
     setNote('');
   };
@@ -206,7 +214,7 @@ export function QuickAddItemDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto !top-3 !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2">
 
         {/* ── MAIN FORM VIEW ── */}
           <>
@@ -277,7 +285,7 @@ export function QuickAddItemDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="qa-price" className="text-sm font-medium">
-                    Price (₹) <span className="text-destructive">*</span>
+                    Selling Price (₹) <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="qa-price"
@@ -305,6 +313,39 @@ export function QuickAddItemDialog({
                 </div>
               </div>
 
+              {/* Cost Price */}
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-cost-price" className="text-sm font-medium">
+                  Cost Price (₹) <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="qa-cost-price"
+                    type="number"
+                    min={1}
+                    step={10}
+                    value={costPrice}
+                    onChange={(e) => setCostPrice(e.target.value)}
+                    placeholder="0"
+                    className="text-lg font-semibold flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCostPrice(price)}
+                    disabled={!price}
+                    title="Use selling price as cost price"
+                    className="shrink-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  If unknown, use autofill button to copy selling price
+                </p>
+              </div>
+
               {/* Note */}
               <div className="space-y-1.5">
                 <Label htmlFor="qa-note" className="text-sm font-medium">Note (optional)</Label>
@@ -323,7 +364,7 @@ export function QuickAddItemDialog({
               </Button>
               <Button
                 onClick={handleAdd}
-                disabled={!categoryName || !price || parseFloat(price) <= 0}
+                disabled={!categoryName || !price || parseFloat(price) <= 0 || !costPrice || parseFloat(costPrice) <= 0}
                 className={`${s.primaryGradient} ${s.primaryGradientHover} text-white`}
               >
                 <Plus className="h-4 w-4 mr-2" />
