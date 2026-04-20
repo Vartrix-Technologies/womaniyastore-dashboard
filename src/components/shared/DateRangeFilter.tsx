@@ -94,7 +94,7 @@ export function DateRangeFilter({
     e.stopPropagation();
     onCustomRangeChange?.(undefined);
     setPendingRange(undefined);
-    onChange('week');
+    onChange('month');
     setPopoverOpen(false);
   };
 

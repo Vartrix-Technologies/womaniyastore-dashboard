@@ -306,7 +306,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-3 md:space-y-5 lg:space-y-7 animate-content-in lg:max-w-5xl lg:mx-auto">
+    <div className="space-y-3 md:space-y-5 lg:space-y-7 animate-content-in lg:max-w-5xl lg:mx-auto pb-24">
       {/* Header */}
       <div>
         <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
@@ -362,11 +362,12 @@ export default function AdminDashboard() {
         ]}
       />
 
-      {/* Today's Checklist Progress */}
-      <ChecklistProgressBanner />
+      {/* Today's Checklist Progress + Weekly Insight grouped tightly */}
+      <div className="space-y-2 lg:space-y-3">
+        <ChecklistProgressBanner />
 
-      {/* Weekly Insight Banner */}
-      {weeklyInsight && (
+        {/* Weekly Insight Banner */}
+        {weeklyInsight && (
         <button
           type="button"
           onClick={() => router.push('/admin/sales')}
@@ -401,6 +402,7 @@ export default function AdminDashboard() {
           <ChevronRight className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground shrink-0" />
         </button>
       )}
+      </div>
 
       {/* Grouped Module Sections */}
       {sections.map((section) => {
@@ -452,7 +454,7 @@ export default function AdminDashboard() {
             <Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />
           </div>
           <h2 className="text-xs lg:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Business Intelligence
+            Business Intelligence AI
           </h2>
         </div>
 

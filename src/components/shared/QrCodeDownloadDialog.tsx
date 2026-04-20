@@ -16,15 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from '@/components/ui/command';
+import { PickerDialog } from '@/components/shared/PickerDialog';
+import type { PickerItem } from '@/components/shared/PickerDialog';
 import {
   Select,
   SelectContent,
@@ -49,8 +42,6 @@ import {
   Tag,
   RefreshCw,
   ChevronRight,
-  ChevronsUpDown,
-  Check,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -147,7 +138,7 @@ export function QrCodeDownloadDialog({
   const [customPrefix, setCustomPrefix] = useState('');
   const [customStart, setCustomStart] = useState<number | ''>('');
   const [customCount, setCustomCount] = useState<number | ''>('');
-  const [prefixPopoverOpen, setPrefixPopoverOpen] = useState(false);
+  const [prefixPickerOpen, setPrefixPickerOpen] = useState(false);
 
   // ── Layout tab state
   const [layoutPresetIdx, setLayoutPresetIdx] = useState(1); // default 4×6
@@ -341,58 +332,40 @@ export function QrCodeDownloadDialog({
                   <div className="space-y-1.5">
                     <Label className="text-xs">Prefix</Label>
                     {prefixes.length > 0 ? (
-                      <Popover open={prefixPopoverOpen} onOpenChange={setPrefixPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={prefixPopoverOpen}
-                            className="w-full justify-between font-normal text-sm"
-                          >
-                            {customPrefix ? (
-                              <span>
-                                <span className="font-mono font-bold">{customPrefix}</span>
-                                {prefixes.find(p => p.prefix === customPrefix)?.description && (
-                                  <span className="ml-2 text-muted-foreground text-xs">
-                                    ({prefixes.find(p => p.prefix === customPrefix)?.description})
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">Select prefix…</span>
-                            )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search prefixes…" />
-                            <CommandList>
-                              <CommandEmpty>No prefix found.</CommandEmpty>
-                              <CommandGroup>
-                                {prefixes.map((p) => (
-                                  <CommandItem
-                                    key={p.id}
-                                    value={`${p.prefix} ${p.description || ''}`}
-                                    onSelect={() => {
-                                      setCustomPrefix(p.prefix);
-                                      setPrefixPopoverOpen(false);
-                                    }}
-                                  >
-                                    <Check className={`mr-2 h-4 w-4 ${customPrefix === p.prefix ? 'opacity-100' : 'opacity-0'}`} />
-                                    <span className="font-mono font-bold">{p.prefix}</span>
-                                    {p.description && (
-                                      <span className="ml-2 text-muted-foreground text-xs">
-                                        ({p.description})
-                                      </span>
-                                    )}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between font-normal text-sm"
+                          onClick={() => setPrefixPickerOpen(true)}
+                        >
+                          {customPrefix ? (
+                            <span>
+                              <span className="font-mono font-bold">{customPrefix}</span>
+                              {prefixes.find(p => p.prefix === customPrefix)?.description && (
+                                <span className="ml-2 text-muted-foreground text-xs">
+                                  ({prefixes.find(p => p.prefix === customPrefix)?.description})
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Select prefix…</span>
+                          )}
+                        </Button>
+                        <PickerDialog
+                          open={prefixPickerOpen}
+                          onOpenChange={setPrefixPickerOpen}
+                          title="Select QR Prefix"
+                          searchPlaceholder="Search prefixes…"
+                          items={prefixes.map((p): PickerItem => ({
+                            id: p.prefix,
+                            label: p.prefix,
+                            sublabel: p.description || undefined,
+                            mono: true,
+                          }))}
+                          selectedId={customPrefix}
+                          onSelect={(id) => setCustomPrefix(id)}
+                        />
+                      </>
                     ) : (
                       <Input
                         value={customPrefix}

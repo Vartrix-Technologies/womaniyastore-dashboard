@@ -107,7 +107,7 @@ export function TopBar({ profile, shopName }: TopBarProps) {
               />
             </div>
             <div className="flex flex-col">
-              <h1 className={`text-[15px] sm:text-[14px] md:text-[15px] lg:text-[18px] font-semibold tracking-tight leading-tight ${isDark ? 'text-slate-200' : 'text-foreground'}`}>
+              <h1 className={`text-[15px] sm:text-[14px] md:text-[15px] lg:text-[18px] font-bold tracking-tight leading-tight ${isDark ? 'text-slate-200' : 'text-foreground'}`}>
                 {shopName || appConfig.brand.name}
               </h1>
             </div>

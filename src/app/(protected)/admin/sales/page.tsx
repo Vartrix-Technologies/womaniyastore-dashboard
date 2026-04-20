@@ -55,7 +55,7 @@ function SalesPageContent() {
   
   // Initialize state from URL params
   const initialTab = searchParams.get('tab') || 'transactions';
-  const initialFilter = (searchParams.get('filter') as DateFilterType) || 'week';
+  const initialFilter = (searchParams.get('filter') as DateFilterType) || 'month';
   const initialSection = searchParams.get('section') || null;
   const hasScrolled = useRef(false);
   
@@ -670,7 +670,7 @@ function SalesPageContent() {
                     <BrainCircuit className="h-4 w-4" />
                   </div>
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    Business Intelligence
+                    Business Intelligence AI
                   </h2>
                   <div className="flex-1 h-px bg-border" />
                 </div>

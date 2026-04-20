@@ -32,7 +32,7 @@ export interface UseDateFilterReturn {
  * // Use startDateISO in Supabase queries: .gte('created_at', startDateISO)
  */
 export function useDateFilter(options: UseDateFilterOptions = {}): UseDateFilterReturn {
-  const { initialFilter = 'week', onFilterChange } = options;
+  const { initialFilter = 'month', onFilterChange } = options;
   const [dateFilter, setDateFilterState] = useState<DateFilterType>(initialFilter);
   const [customRange, setCustomRangeState] = useState<CustomDateRange | undefined>(undefined);
 
