@@ -13,7 +13,7 @@ const s = appConfig.styles;
 export default function StaffPerformancePage() {
   const { profile, loading: authLoading } = useAuth();
   const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({
-    initialFilter: 'week',
+    initialFilter: 'month',
   });
 
   if (authLoading || !profile?.shop_id) {
@@ -39,7 +39,7 @@ export default function StaffPerformancePage() {
   const apiDateRange = dateFilter === 'custom' ? 'year' as const : dateFilter as 'today' | 'week' | 'month' | 'year';
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-content-in">
+    <div className="space-y-4 md:space-y-6 animate-content-in pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/admin" className="relative group shrink-0">

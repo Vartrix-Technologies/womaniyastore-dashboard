@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
@@ -21,9 +20,10 @@ import { addPendingSale } from '@/lib/offline/db';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import type { CartItem } from '@/types/pos.types';
 import { toast } from 'sonner';
-import { Loader2, ShoppingBag, CreditCard, Banknote, Smartphone, Wallet, Package, Tag } from 'lucide-react';
+import { Loader2, ShoppingBag, CreditCard, Banknote, Smartphone, Wallet, Package, Tag, Phone, User } from 'lucide-react';
 import { saleCompleteChime } from '@/lib/sounds';
 import { appConfig } from '@/lib/config/app.config';
+import { supabase } from '@/lib/supabase';
 
 const s = appConfig.styles;
 const a = s.accent;
@@ -48,6 +48,53 @@ export function CheckoutDialog({
   const [customerPhone, setCustomerPhone] = useState('');
   const [processing, setProcessing] = useState(false);
   const { isOnline } = useOfflineStatus();
+
+  // ── Phone autofill from history ────────────────────────────────────
+  interface CustomerSuggestion { phone: string; name: string | null }
+  const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestionBoxRef = useRef<HTMLDivElement>(null);
+
+  const fetchSuggestions = useCallback(async (phone: string) => {
+    if (phone.length < 3) { setSuggestions([]); return; }
+    setSuggestionLoading(true);
+    try {
+      const { data } = await supabase
+        .from('sales')
+        .select('customer_phone, customer_name')
+        .ilike('customer_phone', `${phone}%`)
+        .not('customer_phone', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      // Deduplicate by phone, keep most-recent name
+      const seen = new Map<string, string | null>();
+      for (const row of (data ?? [])) {
+        const p = (row.customer_phone as string).trim();
+        if (!seen.has(p)) seen.set(p, row.customer_name as string | null);
+      }
+      setSuggestions(Array.from(seen.entries()).slice(0, 6).map(([p, n]) => ({ phone: p, name: n })));
+    } catch { /* ignore */ } finally {
+      setSuggestionLoading(false);
+    }
+  }, []);
+
+  const handlePhoneChange = (value: string) => {
+    setCustomerPhone(value);
+    setShowSuggestions(true);
+    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
+    phoneDebounceRef.current = setTimeout(() => fetchSuggestions(value), 300);
+  };
+
+  const handleSelectSuggestion = (s: CustomerSuggestion) => {
+    setCustomerPhone(s.phone);
+    if (s.name) setCustomerName(s.name);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  const [customerDetailsOpen, setCustomerDetailsOpen] = useState(false);
 
   const subtotal = items.reduce((sum, item) => sum + item.originalPrice, 0);
   const total = items.reduce((sum, item) => sum + item.finalPrice, 0);
@@ -222,26 +269,26 @@ export function CheckoutDialog({
       setPaymentMethod('cash');
       setCustomerName('');
       setCustomerPhone('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setCustomerDetailsOpen(false);
     }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Premium Header */}
-        <div className={`bg-gradient-to-r ${s.primaryGradient} px-6 py-5`}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm">
-              <ShoppingBag className="h-5 w-5 text-white" />
+<div className={`bg-gradient-to-r ${s.primaryGradient} px-4 py-2.5 flex-shrink-0`}>
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
+              <ShoppingBag className="h-4 w-4 text-white" />
             </div>
-            <div>
-              <DialogHeader className="p-0 space-y-0.5 text-left">
-                <DialogTitle className="text-white text-lg font-bold">Complete Sale</DialogTitle>
-                <DialogDescription className="text-white/80 text-sm">
-                  {isOnline ? `Review ${items.length} item${items.length !== 1 ? 's' : ''} and confirm` : '⚠️ Offline mode — will sync later'}
-                </DialogDescription>
-              </DialogHeader>
-            </div>
+            <DialogHeader className="p-0 space-y-0 text-left">
+              <DialogTitle className="text-white text-base font-bold">Complete Sale</DialogTitle>
+              {!isOnline && <DialogDescription className="text-white/80 text-xs">⚠️ Offline mode — will sync later</DialogDescription>}
+            </DialogHeader>
           </div>
         </div>
 
@@ -340,58 +387,54 @@ export function CheckoutDialog({
 
           {/* Payment Method */}
           <div className="space-y-2">
-            <Label htmlFor="payment-method" className="text-sm font-semibold flex items-center gap-2">
+            <Label className="text-sm font-semibold flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-muted-foreground" />
               Payment Method
             </Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger id="payment-method" className="h-12 border-border/60">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">
-                  <span className="flex items-center gap-2"><Banknote className="h-4 w-4 text-green-600" /> Cash</span>
-                </SelectItem>
-                <SelectItem value="upi">
-                  <span className="flex items-center gap-2"><Smartphone className="h-4 w-4 text-purple-600" /> UPI</span>
-                </SelectItem>
-                <SelectItem value="card">
-                  <span className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-600" /> Card</span>
-                </SelectItem>
-                <SelectItem value="other">
-                  <span className="flex items-center gap-2"><Wallet className="h-4 w-4 text-orange-600" /> Other</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Customer Details (Optional) */}
-          <div className="space-y-3">
-            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Customer Details (Optional)</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="customer-name" className="text-xs text-muted-foreground">Name</Label>
-                <Input
-                  id="customer-name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Customer name"
-                  className="h-10 border-border/60"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="customer-phone" className="text-xs text-muted-foreground">Phone</Label>
-                <Input
-                  id="customer-phone"
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="10-digit mobile"
-                  className="h-10 border-border/60"
-                />
-              </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { value: 'cash',  label: 'Cash',  Icon: Banknote,   color: 'text-green-600',  activeBg: 'bg-green-50 dark:bg-green-950/40',  activeBorder: 'border-green-500' },
+                { value: 'upi',   label: 'UPI',   Icon: Smartphone, color: 'text-purple-600', activeBg: 'bg-purple-50 dark:bg-purple-950/40', activeBorder: 'border-purple-500' },
+                { value: 'card',  label: 'Card',  Icon: CreditCard,  color: 'text-blue-600',   activeBg: 'bg-blue-50 dark:bg-blue-950/40',   activeBorder: 'border-blue-500' },
+                { value: 'other', label: 'Other', Icon: Wallet,     color: 'text-orange-600', activeBg: 'bg-orange-50 dark:bg-orange-950/40', activeBorder: 'border-orange-500' },
+              ].map(({ value, label, Icon, color, activeBg, activeBorder }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPaymentMethod(value)}
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border-2 py-3 text-xs font-semibold transition-all ${
+                    paymentMethod === value
+                      ? `${activeBg} ${activeBorder} ${color}`
+                      : 'border-border/60 text-muted-foreground hover:border-border hover:bg-muted/40'
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${paymentMethod === value ? color : ''}`} />
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Customer Details — opens nested dialog so keyboard doesn't hide suggestions */}
+          <button
+            type="button"
+            onClick={() => setCustomerDetailsOpen(true)}
+            className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-colors ${(customerPhone || customerName) ? `border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--primary)/0.05)] hover:bg-[hsl(var(--primary)/0.1)]` : `border-border/60 hover:bg-muted/50`}`}
+          >
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span className="font-medium">Customer Details</span>
+              <span className="text-xs">(Optional)</span>
+            </span>
+            {(customerPhone || customerName) ? (
+              <span className="flex items-center gap-1.5 text-xs font-medium">
+                {customerPhone && <span className="font-mono">{customerPhone}</span>}
+                {customerName && <span className="text-muted-foreground">· {customerName}</span>}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Tap to add</span>
+            )}
+          </button>
         </div>
 
         {/* Premium Footer */}
@@ -426,5 +469,96 @@ export function CheckoutDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* ── Customer Details nested dialog ──────────────────────────────
+        Rendered outside the main DialogContent so it sits at the top
+        of the screen on mobile, above the virtual keyboard. */}
+    <Dialog open={customerDetailsOpen} onOpenChange={setCustomerDetailsOpen}>
+      <DialogContent className="sm:max-w-sm !top-3 !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2 max-h-[85dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-4 w-4" /> Customer Details
+          </DialogTitle>
+          <DialogDescription>Optional — used for records &amp; repeat customer lookup</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-1">
+          {/* Phone with history autofill */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cd-phone" className="text-sm font-medium flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5" /> Mobile Number
+            </Label>
+            <Input
+              id="cd-phone"
+              type="tel"
+              inputMode="numeric"
+              value={customerPhone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              onFocus={() => { if (customerPhone.length >= 3) setShowSuggestions(true); }}
+              placeholder="10-digit mobile"
+              className="h-11"
+              autoComplete="off"
+            />
+            {customerPhone && customerPhone.replace(/\D/g, '').length > 0 && customerPhone.replace(/\D/g, '').length < 10 && (
+              <p className="text-xs text-destructive">Enter at least 10 digits</p>
+            )}
+            {/* Suggestions rendered inline (not absolutely positioned) */}
+            {showSuggestions && (suggestions.length > 0 || suggestionLoading) && (
+              <div className="rounded-md border bg-popover shadow-sm overflow-hidden">
+                {suggestionLoading && suggestions.length === 0 ? (
+                  <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Searching…
+                  </div>
+                ) : (
+                  suggestions.map((sg) => (
+                    <button
+                      key={sg.phone}
+                      type="button"
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-accent text-left border-b last:border-b-0"
+                      onPointerDown={(e) => { e.preventDefault(); handleSelectSuggestion(sg); }}
+                    >
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="font-mono font-medium">{sg.phone}</span>
+                      {sg.name && <span className="text-muted-foreground text-xs truncate">· {sg.name}</span>}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Name — auto-filled when a suggestion is picked */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cd-name" className="text-sm font-medium flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" /> Name
+            </Label>
+            <Input
+              id="cd-name"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Customer name"
+              className="h-11"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => { setCustomerPhone(''); setCustomerName(''); setSuggestions([]); setShowSuggestions(false); }} size="sm">
+            Clear
+          </Button>
+          <Button
+            onClick={() => {
+              if (customerPhone && customerPhone.replace(/\D/g, '').length < 10) return;
+              setCustomerDetailsOpen(false);
+            }}
+            size="sm"
+            disabled={!!customerPhone && customerPhone.replace(/\D/g, '').length < 10}
+          >
+            Done
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

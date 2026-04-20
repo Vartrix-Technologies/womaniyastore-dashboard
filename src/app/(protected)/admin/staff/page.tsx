@@ -323,7 +323,7 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-content-in">
+    <div className="space-y-4 md:space-y-6 animate-content-in pb-24">
       {/* Show UserManagement for superadmins when in create mode */}
       {viewMode === 'create' && isSuperadmin ? (
         <>

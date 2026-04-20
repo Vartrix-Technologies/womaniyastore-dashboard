@@ -214,25 +214,23 @@ export function QuickAddItemDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto !top-3 !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2">
+      <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto !top-3 !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2 p-0 gap-0">
 
         {/* ── MAIN FORM VIEW ── */}
           <>
-            <DialogHeader>
-              <div className="flex items-center gap-2">
-                <div className={`p-2 rounded-lg ${s.headerIconGradient} text-white`}>
-                  <Zap className="h-4 w-4" />
+            <div className={`bg-gradient-to-r ${s.primaryGradient} px-4 py-2.5 flex-shrink-0`}>
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Zap className="h-4 w-4 text-white" />
                 </div>
-                <div>
-                  <DialogTitle>Quick Add Item</DialogTitle>
-                  <DialogDescription>
-                    Add an item without QR code — for untagged inventory
-                  </DialogDescription>
-                </div>
+                <DialogHeader className="p-0 space-y-0 text-left">
+                  <DialogTitle className="text-white text-base font-bold">Quick Add Item</DialogTitle>
+                  {/* <DialogDescription className="text-white/80 text-xs">Add an item without QR code</DialogDescription> */}
+                </DialogHeader>
               </div>
-            </DialogHeader>
+            </div>
 
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 px-6 py-4">
               {/* Category */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -358,6 +356,7 @@ export function QuickAddItemDialog({
               </div>
             </div>
 
+            <div className="border-t border-border/60 bg-muted/30 px-6 py-4">
             <DialogFooter className="gap-2 sm:gap-3">
               <Button variant="outline" onClick={handleClose}>
                 Cancel
@@ -371,6 +370,7 @@ export function QuickAddItemDialog({
                 Add to Cart
               </Button>
             </DialogFooter>
+            </div>
           </>
 
       </DialogContent>

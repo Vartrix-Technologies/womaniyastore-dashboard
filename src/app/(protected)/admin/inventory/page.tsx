@@ -70,7 +70,7 @@ function InventoryPageContent() {
   // Hydrate from URL params
   const initialStatus = searchParams.get('status') || 'all';
   const initialCategory = searchParams.get('category') || 'all';
-  const initialDateFilter = (searchParams.get('date') as DateFilterType) || 'year';
+  const initialDateFilter = (searchParams.get('date') as DateFilterType) || 'month';
   const initialSaleType = searchParams.get('sale_type') || 'all';
 
   const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: initialDateFilter });
@@ -578,7 +578,7 @@ function InventoryPageContent() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-content-in">
+    <div className="space-y-4 md:space-y-6 animate-content-in pb-24">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">

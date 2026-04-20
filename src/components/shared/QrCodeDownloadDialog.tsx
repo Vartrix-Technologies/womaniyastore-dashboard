@@ -79,11 +79,20 @@ type SourceMode = 'passed' | 'custom';
 type OutputFormat = 'pdf' | 'zip';
 type PaperSize = 'a3' | 'a4' | 'letter' | 'a5';
 type ZipResolution = 'standard' | 'high' | 'ultra';
+type ImageSize = 'default' | 'cdr';
 
 const ZIP_RESOLUTION_PX: Record<ZipResolution, { px: number; label: string; desc: string }> = {
   standard: { px: 400,  label: 'Standard (400 px)', desc: 'Digital sharing' },
   high:     { px: 800,  label: 'High (800 px)',      desc: 'Print quality' },
   ultra:    { px: 1200, label: 'Ultra HD (1200 px)',  desc: 'Large format' },
+};
+
+// CDR custom size: 1.754" (height) × 1.38" (width)
+const CDR_INCHES = { w: 1.38, h: 1.754 };
+const CDR_DPI_OPTIONS: Record<ZipResolution, { dpi: number; label: string; desc: string }> = {
+  standard: { dpi: 200, label: '200 DPI', desc: `${Math.round(CDR_INCHES.w * 200)} × ${Math.round(CDR_INCHES.h * 200)} px` },
+  high:     { dpi: 300, label: '300 DPI',  desc: `${Math.round(CDR_INCHES.w * 300)} × ${Math.round(CDR_INCHES.h * 300)} px` },
+  ultra:    { dpi: 600, label: '600 DPI',  desc: `${Math.round(CDR_INCHES.w * 600)} × ${Math.round(CDR_INCHES.h * 600)} px` },
 };
 
 const DOT_STYLE_CONFIG: { key: DotStyle; label: string; desc: string }[] = [
@@ -149,6 +158,7 @@ export function QrCodeDownloadDialog({
     paperSize: 'a4',
   });
   const [zipResolution, setZipResolution] = useState<ZipResolution>('high');
+  const [imageSize, setImageSize] = useState<ImageSize>('default');
 
   // ── Style tab state
   const [style, setStyle] = useState<QrStyleOptions>({ ...DEFAULT_QR_STYLE });
@@ -233,13 +243,6 @@ export function QrCodeDownloadDialog({
     if (open) refreshPreview();
   }, [open, style, refreshPreview]);
 
-  // Initialise custom prefix from available prefixes
-  useEffect(() => {
-    if (prefixes.length > 0 && !customPrefix) {
-      setCustomPrefix(prefixes[0].prefix);
-    }
-  }, [prefixes, customPrefix]);
-
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleGenerate = async () => {
@@ -253,8 +256,17 @@ export function QrCodeDownloadDialog({
 
     try {
       if (outputFormat === 'zip') {
-        const resPx = ZIP_RESOLUTION_PX[zipResolution].px;
-        await generateImagesZip(finalCodes, style, setProgress, resPx);
+        if (imageSize === 'cdr') {
+          const dpi = CDR_DPI_OPTIONS[zipResolution].dpi;
+          const targetW = Math.round(CDR_INCHES.w * dpi);
+          const targetH = Math.round(CDR_INCHES.h * dpi);
+          // Render at high internal res then resize
+          const internalRes = Math.max(targetW, targetH, 800);
+          await generateImagesZip(finalCodes, style, setProgress, internalRes, { w: targetW, h: targetH });
+        } else {
+          const resPx = ZIP_RESOLUTION_PX[zipResolution].px;
+          await generateImagesZip(finalCodes, style, setProgress, resPx);
+        }
       } else {
         await generatePdf(finalCodes, layout, style, setProgress);
       }
@@ -290,23 +302,29 @@ export function QrCodeDownloadDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] !flex !flex-col !gap-0 p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <QrCodeIcon className={`h-5 w-5 ${a.textMuted}`} />
-            {title}
-          </DialogTitle>
-          <DialogDescription asChild>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary">{finalCodes.length} code(s)</Badge>
-              {totalPages > 0 && outputFormat === 'pdf' && (
-                <Badge variant="outline">{totalPages} page(s) &bull; {codesPerPage}/page</Badge>
-              )}
+        <div className={`bg-gradient-to-r ${s.primaryGradient} px-4 py-2.5 flex-shrink-0`}>
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
+              <QrCodeIcon className="h-4 w-4 text-white" />
             </div>
-          </DialogDescription>
-        </DialogHeader>
+            <DialogHeader className="p-0 space-y-0 text-left">
+              <DialogTitle className="text-white text-base font-bold">
+                {title}
+              </DialogTitle>
+              <DialogDescription asChild>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px]">{finalCodes.length} code(s)</Badge>
+                  {totalPages > 0 && outputFormat === 'pdf' && (
+                    <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px]">{totalPages} page(s) &bull; {codesPerPage}/page</Badge>
+                  )}
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+        </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-4">
               <TabsTrigger value="source" className="gap-1 text-xs">
@@ -530,31 +548,84 @@ export function QrCodeDownloadDialog({
                 </>
               )}
 
-              {/* ZIP resolution settings */}
+              {/* ZIP image size + resolution settings */}
               {outputFormat === 'zip' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Image Resolution</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(Object.entries(ZIP_RESOLUTION_PX) as [ZipResolution, typeof ZIP_RESOLUTION_PX[ZipResolution]][]).map(([key, val]) => (
+                <>
+                  {/* Image Size */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Image Size</Label>
+                    <div className="grid grid-cols-2 gap-2">
                       <button
-                        key={key}
                         type="button"
-                        onClick={() => setZipResolution(key)}
+                        onClick={() => setImageSize('default')}
                         className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                          zipResolution === key
+                          imageSize === 'default'
                             ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
                             : 'border-muted hover:border-muted-foreground/30'
                         }`}
                       >
-                        <div className="text-xs font-medium">{val.px} px</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">{val.desc}</div>
+                        <div className="text-xs font-medium">Default</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">Square, pixel-based</div>
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setImageSize('cdr')}
+                        className={`p-2.5 rounded-lg border-2 text-center transition-all ${
+                          imageSize === 'cdr'
+                            ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
+                            : 'border-muted hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <div className="text-xs font-medium">CDR Print</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">1.754 × 1.38 in</div>
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Higher resolution = sharper print but larger file size
-                  </p>
-                </div>
+
+                  {/* Resolution / DPI */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">{imageSize === 'cdr' ? 'Print DPI' : 'Image Resolution'}</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {imageSize === 'cdr'
+                        ? (Object.entries(CDR_DPI_OPTIONS) as [ZipResolution, typeof CDR_DPI_OPTIONS[ZipResolution]][]).map(([key, val]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setZipResolution(key)}
+                              className={`p-2.5 rounded-lg border-2 text-center transition-all ${
+                                zipResolution === key
+                                  ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
+                                  : 'border-muted hover:border-muted-foreground/30'
+                              }`}
+                            >
+                              <div className="text-xs font-medium">{val.dpi} DPI</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{val.desc}</div>
+                            </button>
+                          ))
+                        : (Object.entries(ZIP_RESOLUTION_PX) as [ZipResolution, typeof ZIP_RESOLUTION_PX[ZipResolution]][]).map(([key, val]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setZipResolution(key)}
+                              className={`p-2.5 rounded-lg border-2 text-center transition-all ${
+                                zipResolution === key
+                                  ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
+                                  : 'border-muted hover:border-muted-foreground/30'
+                              }`}
+                            >
+                              <div className="text-xs font-medium">{val.px} px</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{val.desc}</div>
+                            </button>
+                          ))
+                      }
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {imageSize === 'cdr'
+                        ? 'Higher DPI = sharper print at 1.754 × 1.38 in'
+                        : 'Higher resolution = sharper print but larger file size'}
+                    </p>
+                  </div>
+                </>
               )}
             </TabsContent>
 
@@ -819,7 +890,7 @@ export function QrCodeDownloadDialog({
                           <input
                             type="range"
                             min={16}
-                            max={32}
+                            max={28}
                             step={1}
                             value={Math.round((style.logoSize ?? 0.24) * 100)}
                             onChange={(e) => setStyle((s) => ({ ...s, logoSize: parseInt(e.target.value) / 100 }))}
@@ -1058,15 +1129,51 @@ async function generatePdf(
 
 // ── ZIP of individual PNG images ────────────────────────────────────────────
 
+/** Resize a rendered canvas to exact target dimensions (letter-box fit) */
+function resizeCanvas(source: HTMLCanvasElement, targetW: number, targetH: number): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = targetW;
+  out.height = targetH;
+  const ctx = out.getContext('2d')!;
+
+  // Fill with white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, targetW, targetH);
+
+  // Scale source to fit within target, maintaining aspect ratio
+  const srcAspect = source.width / source.height;
+  const tgtAspect = targetW / targetH;
+  let drawW: number, drawH: number, drawX: number, drawY: number;
+  if (srcAspect > tgtAspect) {
+    drawW = targetW;
+    drawH = targetW / srcAspect;
+    drawX = 0;
+    drawY = (targetH - drawH) / 2;
+  } else {
+    drawH = targetH;
+    drawW = targetH * srcAspect;
+    drawX = (targetW - drawW) / 2;
+    drawY = 0;
+  }
+  ctx.drawImage(source, drawX, drawY, drawW, drawH);
+  return out;
+}
+
 async function generateImagesZip(
   codes: string[],
   style: QrStyleOptions,
   onProgress: (p: number) => void,
   resolution: number = 800,
+  targetSize?: { w: number; h: number },
 ): Promise<void> {
+  const toFinalCanvas = async (code: string) => {
+    const canvas = await renderQrToCanvas(code, resolution, style);
+    return targetSize ? resizeCanvas(canvas, targetSize.w, targetSize.h) : canvas;
+  };
+
   // Single code → direct PNG download (no ZIP wrapper)
   if (codes.length === 1) {
-    const canvas = await renderQrToCanvas(codes[0], resolution, style);
+    const canvas = await toFinalCanvas(codes[0]);
     onProgress(80);
     const blob = await new Promise<Blob>((res) =>
       canvas.toBlob((b) => res(b!), 'image/png'),
@@ -1088,7 +1195,7 @@ async function generateImagesZip(
   const folder = zip.folder('QR-Codes')!;
 
   for (let i = 0; i < codes.length; i++) {
-    const canvas = await renderQrToCanvas(codes[i], resolution, style);
+    const canvas = await toFinalCanvas(codes[i]);
     const blob = await new Promise<Blob>((res) =>
       canvas.toBlob((b) => res(b!), 'image/png'),
     );

@@ -71,7 +71,7 @@ function FinancesPageContent() {
   const searchParams = useSearchParams();
 
   // Initialize from URL params (13.4)
-  const initialDateFilter = (searchParams.get('date') as DateFilterType) || 'week';
+  const initialDateFilter = (searchParams.get('date') as DateFilterType) || 'month';
   const initialCategory = searchParams.get('category') || 'all';
 
   const { dateFilter, setDateFilter, customRange, setCustomRange, dateRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: initialDateFilter });
@@ -595,7 +595,7 @@ function FinancesPageContent() {
   if (debouncedSearchTerm) filterChips.push({ label: 'Search', value: `"${debouncedSearchTerm}"`, onClear: () => { setSearchTerm(''); setCurrentPage(1); } });
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">

@@ -307,7 +307,7 @@ export default function AddStockLotPage() {
     : '0';
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-4 md:space-y-6 max-w-2xl mx-auto pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/admin/inventory" className="relative group shrink-0">

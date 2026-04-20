@@ -35,13 +35,11 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const processingRef = useRef(false); // ref-based guard: prevents double-fire from fast callbacks
   const { isOnline } = useOfflineStatus();
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(CAMERA_FACING_KEY);
-      return saved === 'user' ? 'user' : 'environment';
-    }
-    return 'environment';
-  });
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  useEffect(() => {
+    const saved = localStorage.getItem(CAMERA_FACING_KEY);
+    if (saved === 'user') setFacingMode('user');
+  }, []);
 
   // Forcefully kill every active camera track so the indicator light turns off.
   // Html5Qrcode.stop() alone doesn't always release the MediaStream on mobile.
@@ -307,19 +305,14 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
       <Dialog open={scanning} onOpenChange={(open) => !open && stopScanning()}>
         <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
           {/* Premium Header */}
-          <div className={`bg-gradient-to-r ${s.primaryGradient} px-6 py-4`}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm">
-                <QrCode className="h-5 w-5 text-white" />
+          <div className={`bg-gradient-to-r ${s.primaryGradient} px-4 py-2.5 flex-shrink-0`}>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
+                <QrCode className="h-4 w-4 text-white" />
               </div>
-              <div>
-                <DialogHeader className="p-0 space-y-0.5 text-left">
-                  <DialogTitle className="text-white text-lg font-bold">Scan QR Code</DialogTitle>
-                  <DialogDescription className="text-white/80 text-sm">
-                    Point your camera at the item&apos;s QR code
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
+              <DialogHeader className="p-0 space-y-0 text-left">
+                <DialogTitle className="text-white text-base font-bold">Scan QR Code</DialogTitle>
+              </DialogHeader>
             </div>
           </div>
 

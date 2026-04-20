@@ -224,7 +224,7 @@ export default function ReturnsPage() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-content-in">
+    <div className="space-y-4 md:space-y-6 animate-content-in pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">

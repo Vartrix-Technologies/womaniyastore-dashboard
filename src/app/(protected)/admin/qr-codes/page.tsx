@@ -50,7 +50,7 @@ export default function QrCodesPage() {
   const [tableLoading, setTableLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const { searchTerm, debouncedSearchTerm, setSearchTerm } = useDebouncedSearch({ delay: 500 });
-  const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: 'year' });
+  const { dateFilter, setDateFilter, customRange, setCustomRange, startDateISO, endDateISO } = useDateFilter({ initialFilter: 'month' });
   const [filterStatus, setFilterStatus] = useState<QrStatus | 'all'>('all');
   const [filterPrefix, setFilterPrefix] = useState<string>('all');
   const [totalCount, setTotalCount] = useState(0);
@@ -611,7 +611,7 @@ export default function QrCodesPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-content-in">
+    <div className="space-y-4 md:space-y-6 animate-content-in pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.push('/admin')} className="relative group shrink-0">

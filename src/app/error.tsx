@@ -14,9 +14,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html>
-      <body>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
           <div className="text-center space-y-6 p-8 bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <span className="text-5xl">🔥</span>
@@ -53,8 +51,6 @@ export default function GlobalError({
               </button>
             </div>
           </div>
-        </div>
-      </body>
-    </html>
+    </div>
   );
 }
