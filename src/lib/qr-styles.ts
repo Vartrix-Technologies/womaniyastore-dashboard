@@ -42,7 +42,7 @@ export const DEFAULT_QR_STYLE: QrStyleOptions = {
   badgeText: '',
   badgeColor: '#e11d48',
   badgeTextColor: '#ffffff',
-  showLogo: false,
+  showLogo: true,
   logoUrl: '/womaniya_logo_lightbg.png',
   dotStyle: 'rounded',
   logoSize: 0.24,

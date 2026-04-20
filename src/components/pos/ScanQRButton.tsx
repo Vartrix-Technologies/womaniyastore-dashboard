@@ -318,7 +318,7 @@ export function ScanQRButton({ onItemScanned, onManualEntry }: ScanQRButtonProps
 
           <div className="px-6 py-5 space-y-4">
             <div className="relative rounded-xl overflow-hidden border-2 border-border/40 shadow-inner bg-black/5">
-              <div id="qr-reader" className={`w-full ${facingMode === 'environment' ? '[&_video]:!transform-none' : ''}`}></div>
+              <div id="qr-reader" className="w-full [&_video]:!transform-none"></div>
               <button
                 onClick={switchCamera}
                 className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors z-10"

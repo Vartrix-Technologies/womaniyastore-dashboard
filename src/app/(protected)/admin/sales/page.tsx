@@ -702,8 +702,8 @@ function SalesPageContent() {
                   Long-Term Trends
                 </h3>
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <MarginByCategoryChart shopId={profile.shop_id as string} monthsBack={6} />
-                  <CohortRetentionGrid shopId={profile.shop_id as string} />
+                  <div className="min-w-0"><MarginByCategoryChart shopId={profile.shop_id as string} monthsBack={6} /></div>
+                  <div className="min-w-0"><CohortRetentionGrid shopId={profile.shop_id as string} /></div>
                 </div>
               </section>
             </>

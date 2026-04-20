@@ -179,8 +179,8 @@ export function CohortRetentionGrid({ shopId }: CohortRetentionGridProps) {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[340px] text-xs">
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="w-full min-w-[420px] text-xs">
               <thead>
                 <tr>
                   <th className="text-left font-semibold text-muted-foreground py-1.5 pr-3 whitespace-nowrap">

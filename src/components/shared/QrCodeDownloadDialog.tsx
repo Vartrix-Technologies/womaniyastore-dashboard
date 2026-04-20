@@ -18,23 +18,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { PickerDialog } from '@/components/shared/PickerDialog';
 import type { PickerItem } from '@/components/shared/PickerDialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
 import { Separator } from '@/components/ui/separator';
 import {
   Download,
-  Printer,
-  FileImage,
   Loader2,
   CheckCircle,
   Palette,
-  LayoutGrid,
   Filter,
   Eye,
   QrCode as QrCodeIcon,
@@ -77,23 +66,10 @@ interface QrCodeDownloadDialogProps {
 
 type SourceMode = 'passed' | 'custom';
 type OutputFormat = 'pdf' | 'zip';
-type PaperSize = 'a3' | 'a4' | 'letter' | 'a5';
-type ZipResolution = 'standard' | 'high' | 'ultra';
-type ImageSize = 'default' | 'cdr';
-
-const ZIP_RESOLUTION_PX: Record<ZipResolution, { px: number; label: string; desc: string }> = {
-  standard: { px: 400,  label: 'Standard (400 px)', desc: 'Digital sharing' },
-  high:     { px: 800,  label: 'High (800 px)',      desc: 'Print quality' },
-  ultra:    { px: 1200, label: 'Ultra HD (1200 px)',  desc: 'Large format' },
-};
-
-// CDR custom size: 1.754" (height) × 1.38" (width)
+type PaperSize = 'a3' | 'a4' | 'letter' | 'a5' | '12x18land';
+// CDR print size: 1.754" (height) × 1.38" (width) at fixed 400 DPI
 const CDR_INCHES = { w: 1.38, h: 1.754 };
-const CDR_DPI_OPTIONS: Record<ZipResolution, { dpi: number; label: string; desc: string }> = {
-  standard: { dpi: 200, label: '200 DPI', desc: `${Math.round(CDR_INCHES.w * 200)} × ${Math.round(CDR_INCHES.h * 200)} px` },
-  high:     { dpi: 300, label: '300 DPI',  desc: `${Math.round(CDR_INCHES.w * 300)} × ${Math.round(CDR_INCHES.h * 300)} px` },
-  ultra:    { dpi: 600, label: '600 DPI',  desc: `${Math.round(CDR_INCHES.w * 600)} × ${Math.round(CDR_INCHES.h * 600)} px` },
-};
+const CDR_DPI = 400;
 
 const DOT_STYLE_CONFIG: { key: DotStyle; label: string; desc: string }[] = [
   { key: 'square',  label: 'Square',  desc: 'Sharp edges' },
@@ -110,18 +86,20 @@ interface LayoutSettings {
 }
 
 const PAPER_DIMENSIONS: Record<PaperSize, { w: number; h: number; label: string }> = {
-  a3:     { w: 297, h: 420, label: 'A3 (297 × 420 mm)' },
-  a4:     { w: 210, h: 297, label: 'A4 (210 × 297 mm)' },
-  letter: { w: 216, h: 279, label: 'Letter (216 × 279 mm)' },
-  a5:     { w: 148, h: 210, label: 'A5 (148 × 210 mm)' },
+  a3:        { w: 297,   h: 420,   label: 'A3 (297 × 420 mm)' },
+  a4:        { w: 210,   h: 297,   label: 'A4 (210 × 297 mm)' },
+  letter:    { w: 216,   h: 279,   label: 'Letter (216 × 279 mm)' },
+  a5:        { w: 148,   h: 210,   label: 'A5 (148 × 210 mm)' },
+  '12x18land': { w: 457.2, h: 304.8, label: '12 × 18 in Landscape' },
 };
 
-const LAYOUT_PRESETS: { label: string; cols: number; rows: number; qrMm: number }[] = [
-  { label: '3 × 5 (Large)',    cols: 3, rows: 5,  qrMm: 50 },
-  { label: '4 × 6 (Medium)',   cols: 4, rows: 6,  qrMm: 40 },
-  { label: '5 × 8 (Compact)',  cols: 5, rows: 8,  qrMm: 30 },
-  { label: '6 × 9 (Dense)',    cols: 6, rows: 9,  qrMm: 25 },
-  { label: '8 × 11 (Tiny)',    cols: 8, rows: 11, qrMm: 18 },
+const LAYOUT_PRESETS: { label: string; cols: number; rows: number; qrMm: number; paperSize?: PaperSize }[] = [
+  { label: '3 × 5 (Large)',         cols: 3,  rows: 5,  qrMm: 50 },
+  { label: '4 × 6 (Medium)',         cols: 4,  rows: 6,  qrMm: 40 },
+  { label: '5 × 8 (Compact)',        cols: 5,  rows: 8,  qrMm: 30 },
+  { label: '6 × 9 (Dense)',          cols: 6,  rows: 9,  qrMm: 25 },
+  { label: '8 × 11 (Tiny)',          cols: 8,  rows: 11, qrMm: 18 },
+  { label: '12×18 in — 66 up 🗈',   cols: 11, rows: 6,  qrMm: 36, paperSize: '12x18land' },
 ];
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -150,23 +128,12 @@ export function QrCodeDownloadDialog({
   const [prefixPickerOpen, setPrefixPickerOpen] = useState(false);
 
   // ── Layout tab state
-  const [layoutPresetIdx, setLayoutPresetIdx] = useState(1); // default 4×6
-  const [layout, setLayout] = useState<LayoutSettings>({
-    cols: 4,
-    rows: 6,
-    qrSizeMm: 40,
-    paperSize: 'a4',
-  });
-  const [zipResolution, setZipResolution] = useState<ZipResolution>('high');
-  const [imageSize, setImageSize] = useState<ImageSize>('default');
-
   // ── Style tab state
   const [style, setStyle] = useState<QrStyleOptions>({ ...DEFAULT_QR_STYLE });
   const [colorPresetIdx, setColorPresetIdx] = useState(0);
   const [badgePresetIdx, setBadgePresetIdx] = useState(0);
 
   // ── Output
-  const [outputFormat, setOutputFormat] = useState<OutputFormat>('zip');
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -174,8 +141,9 @@ export function QrCodeDownloadDialog({
   // ── Preview
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [showFullPreview, setShowFullPreview] = useState(false);
 
-  // ── Track active tab — generate only enabled on Preview
+  // ── Active tab
   const [activeTab, setActiveTab] = useState('source');
 
   // ── Derive final code list
@@ -191,17 +159,6 @@ export function QrCodeDownloadDialog({
     }
     return result;
   }, [sourceMode, codes, customPrefix, customStart, customCount]);
-
-  const codesPerPage = layout.cols * layout.rows;
-  const totalPages = Math.ceil(finalCodes.length / codesPerPage);
-
-  // ── Apply layout preset
-  const applyLayoutPreset = useCallback((idx: number) => {
-    const p = LAYOUT_PRESETS[idx];
-    if (!p) return;
-    setLayoutPresetIdx(idx);
-    setLayout((prev) => ({ ...prev, cols: p.cols, rows: p.rows, qrSizeMm: p.qrMm }));
-  }, []);
 
   // ── Apply colour preset
   const applyColorPreset = useCallback((idx: number) => {
@@ -250,26 +207,16 @@ export function QrCodeDownloadDialog({
       toast.error('No QR codes to process');
       return;
     }
+    setShowFullPreview(false);
     setProcessing(true);
     setProgress(0);
     setCompleted(false);
 
     try {
-      if (outputFormat === 'zip') {
-        if (imageSize === 'cdr') {
-          const dpi = CDR_DPI_OPTIONS[zipResolution].dpi;
-          const targetW = Math.round(CDR_INCHES.w * dpi);
-          const targetH = Math.round(CDR_INCHES.h * dpi);
-          // Render at high internal res then resize
-          const internalRes = Math.max(targetW, targetH, 800);
-          await generateImagesZip(finalCodes, style, setProgress, internalRes, { w: targetW, h: targetH });
-        } else {
-          const resPx = ZIP_RESOLUTION_PX[zipResolution].px;
-          await generateImagesZip(finalCodes, style, setProgress, resPx);
-        }
-      } else {
-        await generatePdf(finalCodes, layout, style, setProgress);
-      }
+      const targetW = Math.round(CDR_INCHES.w * CDR_DPI);
+      const targetH = Math.round(CDR_INCHES.h * CDR_DPI);
+      const internalRes = Math.max(targetW, targetH, 800);
+      await generateImagesZip(finalCodes, style, setProgress, internalRes, { w: targetW, h: targetH }, CDR_DPI);
       setCompleted(true);
       toast.success(`Processed ${finalCodes.length} QR codes`);
     } catch (err) {
@@ -280,7 +227,7 @@ export function QrCodeDownloadDialog({
     }
   };
 
-  const TAB_ORDER = ['source', 'layout', 'style', 'preview'] as const;
+  const TAB_ORDER = ['source', 'style'] as const;
 
   const handleNext = () => {
     const idx = TAB_ORDER.indexOf(activeTab as typeof TAB_ORDER[number]);
@@ -314,9 +261,7 @@ export function QrCodeDownloadDialog({
               <DialogDescription asChild>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px]">{finalCodes.length} code(s)</Badge>
-                  {totalPages > 0 && outputFormat === 'pdf' && (
-                    <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px]">{totalPages} page(s) &bull; {codesPerPage}/page</Badge>
-                  )}
+                  <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px]">CDR · 400 DPI</Badge>
                 </div>
               </DialogDescription>
             </DialogHeader>
@@ -326,18 +271,12 @@ export function QrCodeDownloadDialog({
         {/* Scrollable body */}
         <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="source" className="gap-1 text-xs">
-                <Filter className="h-3.5 w-3.5" /> Source
-              </TabsTrigger>
-              <TabsTrigger value="layout" className="gap-1 text-xs">
-                <LayoutGrid className="h-3.5 w-3.5" /> Layout
+                <Filter className="h-3.5 w-3.5" /> 1. Source
               </TabsTrigger>
               <TabsTrigger value="style" className="gap-1 text-xs">
-                <Palette className="h-3.5 w-3.5" /> Style
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="gap-1 text-xs">
-                <Eye className="h-3.5 w-3.5" /> Preview
+                <Palette className="h-3.5 w-3.5" /> 2. Style
               </TabsTrigger>
             </TabsList>
 
@@ -393,34 +332,50 @@ export function QrCodeDownloadDialog({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Start Number</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={9999}
-                        value={customStart}
-                        placeholder="e.g. 1"
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCustomStart(v === '' ? '' : Math.max(1, parseInt(v) || 1));
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Total Codes</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Start Number</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={9999}
+                      value={customStart}
+                      placeholder="e.g. 1"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCustomStart(v === '' ? '' : Math.max(1, parseInt(v) || 1));
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Total Codes</Label>
+                    <div className="flex gap-1.5">
                       <Input
                         type="number"
                         min={1}
                         max={9999}
                         value={customCount}
                         placeholder="e.g. 100"
+                        className="flex-1 min-w-0"
                         onChange={(e) => {
                           const v = e.target.value;
                           setCustomCount(v === '' ? '' : Math.max(1, parseInt(v) || 1));
                         }}
                       />
+                      <select
+                        className="h-9 shrink-0 rounded-md border border-input bg-background px-2 text-xs text-muted-foreground cursor-pointer"
+                        value=""
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value);
+                          if (v) setCustomCount(v);
+                        }}
+                      >
+                        <option value="" disabled>Sheets</option>
+                        <option value="66">1 sheet (66)</option>
+                        <option value="132">2 sheets (132)</option>
+                        <option value="198">3 sheets (198)</option>
+                        <option value="264">4 sheets (264)</option>
+                        <option value="330">5 sheets (330)</option>
+                      </select>
                     </div>
                   </div>
 
@@ -440,197 +395,22 @@ export function QrCodeDownloadDialog({
               </div>
             </TabsContent>
 
-            {/* ━━━━━━━━ LAYOUT ━━━━━━━━ */}
-            <TabsContent value="layout" className="space-y-4 pb-4">
-              {/* PDF layout settings — available but not the default path */}
-              {outputFormat === 'pdf' && (
-                <>
-                  {/* Paper size */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Paper Size</Label>
-                    <Select
-                      value={layout.paperSize}
-                      onValueChange={(v) =>
-                        setLayout((prev) => ({ ...prev, paperSize: v as PaperSize }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(PAPER_DIMENSIONS).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>
-                            {v.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Layout presets */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Layout Preset</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {LAYOUT_PRESETS.map((p, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => applyLayoutPreset(idx)}
-                          className={`p-2 rounded-md border text-center text-xs transition-all ${
-                            layoutPresetIdx === idx
-                              ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
-                              : 'border-muted hover:border-muted-foreground/30'
-                          }`}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom grid fine-tune */}
-                  <div className="space-y-3 p-3 rounded-lg bg-muted/50">
-                    <Label className="text-xs font-medium">Fine-tune Grid</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Columns</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={12}
-                          value={layout.cols}
-                          onChange={(e) => {
-                            setLayout((prev) => ({
-                              ...prev,
-                              cols: Math.max(1, parseInt(e.target.value) || 1),
-                            }));
-                            setLayoutPresetIdx(-1);
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Rows</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={20}
-                          value={layout.rows}
-                          onChange={(e) => {
-                            setLayout((prev) => ({
-                              ...prev,
-                              rows: Math.max(1, parseInt(e.target.value) || 1),
-                            }));
-                            setLayoutPresetIdx(-1);
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">QR size (mm)</Label>
-                        <Input
-                          type="number"
-                          min={10}
-                          max={80}
-                          value={layout.qrSizeMm}
-                          onChange={(e) => {
-                            setLayout((prev) => ({
-                              ...prev,
-                              qrSizeMm: Math.max(10, parseInt(e.target.value) || 10),
-                            }));
-                            setLayoutPresetIdx(-1);
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {codesPerPage} codes per page &bull; {totalPages} page(s) total
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* ZIP image size + resolution settings */}
-              {outputFormat === 'zip' && (
-                <>
-                  {/* Image Size */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Image Size</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setImageSize('default')}
-                        className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                          imageSize === 'default'
-                            ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
-                            : 'border-muted hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <div className="text-xs font-medium">Default</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">Square, pixel-based</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImageSize('cdr')}
-                        className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                          imageSize === 'cdr'
-                            ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
-                            : 'border-muted hover:border-muted-foreground/30'
-                        }`}
-                      >
-                        <div className="text-xs font-medium">CDR Print</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">1.754 × 1.38 in</div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Resolution / DPI */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">{imageSize === 'cdr' ? 'Print DPI' : 'Image Resolution'}</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {imageSize === 'cdr'
-                        ? (Object.entries(CDR_DPI_OPTIONS) as [ZipResolution, typeof CDR_DPI_OPTIONS[ZipResolution]][]).map(([key, val]) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => setZipResolution(key)}
-                              className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                                zipResolution === key
-                                  ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
-                                  : 'border-muted hover:border-muted-foreground/30'
-                              }`}
-                            >
-                              <div className="text-xs font-medium">{val.dpi} DPI</div>
-                              <div className="text-[10px] text-muted-foreground mt-0.5">{val.desc}</div>
-                            </button>
-                          ))
-                        : (Object.entries(ZIP_RESOLUTION_PX) as [ZipResolution, typeof ZIP_RESOLUTION_PX[ZipResolution]][]).map(([key, val]) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => setZipResolution(key)}
-                              className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                                zipResolution === key
-                                  ? `${a.borderStrong} ${a.bg} font-semibold ${a.bgDarkSolid}`
-                                  : 'border-muted hover:border-muted-foreground/30'
-                              }`}
-                            >
-                              <div className="text-xs font-medium">{val.px} px</div>
-                              <div className="text-[10px] text-muted-foreground mt-0.5">{val.desc}</div>
-                            </button>
-                          ))
-                      }
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {imageSize === 'cdr'
-                        ? 'Higher DPI = sharper print at 1.754 × 1.38 in'
-                        : 'Higher resolution = sharper print but larger file size'}
-                    </p>
-                  </div>
-                </>
-              )}
-            </TabsContent>
-
             {/* ━━━━━━━━ STYLE ━━━━━━━━ */}
             <TabsContent value="style" className="space-y-4 pb-4">
+              {/* ── Inline live preview thumbnail ── */}
+              <div className="relative flex items-center justify-center p-3 bg-muted/40 rounded-xl border min-h-[160px]">
+                {previewLoading ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                ) : previewUrl ? (
+                  <img src={previewUrl} alt="QR Preview" className="max-h-[150px] max-w-[150px] object-contain rounded-lg shadow border bg-white" />
+                ) : (
+                  <QrCodeIcon className="h-12 w-12 text-muted-foreground" />
+                )}
+                <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 opacity-60 hover:opacity-100" onClick={refreshPreview} disabled={previewLoading}>
+                  <RefreshCw className={`h-3 w-3 ${previewLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+
               {/* Module Style */}
               <div className="space-y-2">
                 <Label className="font-semibold flex items-center gap-1.5">
@@ -679,8 +459,8 @@ export function QrCodeDownloadDialog({
                           </div>
                         )}
                       </div>
-                      <div className="text-xs font-medium">{label}</div>
-                      <div className="text-[10px] text-muted-foreground leading-tight">{desc}</div>
+                      <div className="text-[10px] font-medium leading-tight truncate w-full">{label}</div>
+                      <div className="text-[10px] text-muted-foreground leading-tight truncate w-full">{desc}</div>
                     </button>
                   ))}
                 </div>
@@ -908,84 +688,44 @@ export function QrCodeDownloadDialog({
               </div>
             </TabsContent>
 
-            {/* ━━━━━━━━ PREVIEW ━━━━━━━━ */}
-            <TabsContent value="preview" className="space-y-4 pb-4">
-              <div className="flex items-center justify-between">
-                <Label className="font-semibold">Live Preview</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={refreshPreview}
-                  disabled={previewLoading}
-                  className="h-7 text-xs"
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 mr-1 ${previewLoading ? 'animate-spin' : ''}`}
-                  />
-                  Refresh
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-center p-6 bg-muted/30 rounded-xl min-h-[260px]">
-                {previewLoading ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                ) : previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="QR Preview"
-                    className="max-h-[300px] rounded-lg shadow-lg border"
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">No preview available</p>
-                )}
-              </div>
-
-              <p className="text-xs text-muted-foreground text-center">
-                Showing first code:{' '}
-                <span className="font-mono font-semibold">{finalCodes[0] || '—'}</span>
-              </p>
-
-              {/* Quick summary */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2 rounded bg-muted/50">
-                  <span className="text-muted-foreground">Codes:</span>{' '}
-                  <span className="font-semibold">{finalCodes.length}</span>
-                </div>
-                <div className="p-2 rounded bg-muted/50">
-                  <span className="text-muted-foreground">Format:</span>{' '}
-                  <span className="font-semibold">
-                    {outputFormat === 'pdf' ? 'PDF Sheet' : 'Images (ZIP)'}
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-muted/50">
-                  <span className="text-muted-foreground">Style:</span>{' '}
-                  <span className="font-semibold capitalize">{style.dotStyle ?? 'rounded'}</span>
-                </div>
-                {outputFormat === 'pdf' ? (
-                  <>
-                    <div className="p-2 rounded bg-muted/50">
-                      <span className="text-muted-foreground">Grid:</span>{' '}
-                      <span className="font-semibold">
-                        {layout.cols} × {layout.rows}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-2 rounded bg-muted/50">
-                    <span className="text-muted-foreground">Resolution:</span>{' '}
-                    <span className="font-semibold">{ZIP_RESOLUTION_PX[zipResolution].px} px</span>
-                  </div>
-                )}
-                {outputFormat === 'pdf' && (
-                  <div className="p-2 rounded bg-muted/50">
-                    <span className="text-muted-foreground">Pages:</span>{' '}
-                    <span className="font-semibold">{totalPages}</span>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
           </Tabs>
         </div>
+
+        {/* ── Full-size preview overlay ── */}
+        {showFullPreview && !processing && !completed && (
+          <div className="absolute inset-0 z-40 bg-background/97 backdrop-blur-sm flex flex-col items-center justify-center gap-4 rounded-lg p-6">
+            <div className="flex items-center justify-between w-full max-w-xs">
+              <p className="text-sm font-semibold">Preview</p>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowFullPreview(false)}>
+                ✕ Close
+              </Button>
+            </div>
+            <div className="flex items-center justify-center rounded-xl bg-muted/30 p-4">
+              {previewLoading ? (
+                <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+              ) : previewUrl ? (
+                <img src={previewUrl} alt="QR Preview" className="max-h-[280px] max-w-[280px] rounded-xl shadow-lg border" />
+              ) : (
+                <p className="text-sm text-muted-foreground">No preview</p>
+              )}
+            </div>
+            <div className="text-center space-y-0.5">
+              <p className="text-xs font-mono font-semibold">{finalCodes[0] || '—'}</p>
+              <p className="text-[10px] text-muted-foreground">{finalCodes.length} code(s) · CDR · 400 DPI · 1.754 × 1.38 in</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowFullPreview(false)}>Back</Button>
+              <Button
+                onClick={handleGenerate}
+                disabled={processing || completed || finalCodes.length === 0}
+                className={`${s.primaryGradient} ${s.primaryGradientHover} text-white`}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Generate {finalCodes.length} QR{finalCodes.length !== 1 ? 's' : ''}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* ── Progress / completion overlay ── */}
         {(processing || completed) && (
@@ -1010,9 +750,7 @@ export function QrCodeDownloadDialog({
                 <div>
                   <p className="text-base font-semibold">Download Complete!</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {outputFormat === 'pdf'
-                      ? `PDF with ${totalPages} page(s) and ${finalCodes.length} QR codes`
-                      : `ZIP with ${finalCodes.length} QR code image(s)`}
+                    {`ZIP with ${finalCodes.length} CDR-ready QR image(s) · 400 DPI`}
                   </p>
                 </div>
                 <Button onClick={handleClose} className={`${s.primaryGradient} ${s.primaryGradientHover} text-white mt-2`}>
@@ -1038,27 +776,34 @@ export function QrCodeDownloadDialog({
 
         {/* ── Footer ── */}
         <DialogFooter className="px-6 pb-6 pt-2 shrink-0">
-          <Button variant="outline" onClick={handleClose} disabled={processing}>
-            Cancel
-          </Button>
-          {activeTab !== 'preview' ? (
+          {activeTab === 'source' ? (
             <Button
               onClick={handleNext}
-              disabled={activeTab === 'source' && (typeof customStart !== 'number' || typeof customCount !== 'number' || customCount < 1)}
-              className={`${s.primaryGradient} ${s.primaryGradientHover} text-white`}
+              disabled={typeof customStart !== 'number' || typeof customCount !== 'number' || customCount < 1}
+              className={`${s.primaryGradient} ${s.primaryGradientHover} text-white w-full`}
             >
               Next
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button
-              onClick={handleGenerate}
-              disabled={processing || completed || finalCodes.length === 0}
-              className={`${s.primaryGradient} ${s.primaryGradientHover} text-white`}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Generate
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                onClick={() => { refreshPreview(); setShowFullPreview(true); }}
+                disabled={previewLoading || finalCodes.length === 0}
+                className="flex-1 gap-1.5"
+              >
+                <Eye className="h-4 w-4" /> Preview
+              </Button>
+              <Button
+                onClick={handleGenerate}
+                disabled={processing || completed || finalCodes.length === 0}
+                className={`flex-1 ${s.primaryGradient} ${s.primaryGradientHover} text-white`}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Generate
+              </Button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
@@ -1082,18 +827,19 @@ async function generatePdf(
   const gap = 2;
   const totalGridW = cols * qrSizeMm + (cols - 1) * gap;
   const totalGridH = rows * qrSizeMm + (rows - 1) * gap;
-  const marginX = Math.max(5, (paper.w - totalGridW) / 2);
-  const marginY = Math.max(5, (paper.h - totalGridH) / 2);
+  const marginX = (paper.w - totalGridW) / 2;
+  const marginY = (paper.h - totalGridH) / 2;
   const cellW = qrSizeMm;
   const cellH = qrSizeMm;
 
-  // px size for canvas rendering – 5× resolution for crisp print
-  const qrPx = Math.round(qrSizeMm * 5);
+  // 15.75 px/mm ≈ 400 DPI — crisp print output
+  const qrPx = Math.round(qrSizeMm * 15.75);
 
+  const isLandscape = paper.w > paper.h;
   const pdf = new jsPDF({
-    orientation: 'portrait',
+    orientation: isLandscape ? 'landscape' : 'portrait',
     unit: 'mm',
-    format: [paper.w, paper.h],
+    format: isLandscape ? [paper.h, paper.w] : [paper.w, paper.h],
   });
 
   const totalPages = Math.ceil(codes.length / codesPerPage);
@@ -1127,7 +873,55 @@ async function generatePdf(
   pdf.save(`QR-Codes-${ts}.pdf`);
 }
 
-// ── ZIP of individual PNG images ────────────────────────────────────────────
+// ── PNG DPI metadata injection (pHYs chunk) ─────────────────────────────────
+
+// CRC32 lookup table (PNG spec requires CRC on each chunk)
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[i] = c;
+  }
+  return t;
+})();
+
+function pngCrc32(data: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < data.length; i++) crc = CRC_TABLE[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Injects a pHYs chunk into a PNG blob so apps like CorelDRAW auto-size the
+ * image to the correct physical dimensions at the given DPI.
+ */
+async function injectPngDpi(blob: Blob, dpi: number): Promise<Blob> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // PNG: 8-byte signature + 25-byte IHDR chunk = insert after byte 33
+  const insertAt = 33;
+  const ppm = Math.round(dpi / 0.0254); // pixels per metre
+
+  // pHYs chunk: 4 (length) + 4 (type) + 9 (data) + 4 (CRC) = 21 bytes
+  const chunk = new Uint8Array(21);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9, false);                             // length = 9
+  chunk[4] = 0x70; chunk[5] = 0x48; chunk[6] = 0x59; chunk[7] = 0x73; // 'pHYs'
+  dv.setUint32(8,  ppm, false);                          // X pixels per unit
+  dv.setUint32(12, ppm, false);                          // Y pixels per unit
+  chunk[16] = 1;                                         // unit = metre
+  dv.setUint32(17, pngCrc32(chunk.slice(4, 17)), false); // CRC
+
+  const result = new Uint8Array(bytes.length + 21);
+  result.set(bytes.slice(0, insertAt));
+  result.set(chunk, insertAt);
+  result.set(bytes.slice(insertAt), insertAt + 21);
+  return new Blob([result], { type: 'image/png' });
+}
+
+// ── ZIP of individual PNG images ─────────────────────────────────────────────
 
 /** Resize a rendered canvas to exact target dimensions (letter-box fit) */
 function resizeCanvas(source: HTMLCanvasElement, targetW: number, targetH: number): HTMLCanvasElement {
@@ -1165,19 +959,20 @@ async function generateImagesZip(
   onProgress: (p: number) => void,
   resolution: number = 800,
   targetSize?: { w: number; h: number },
+  dpi?: number,
 ): Promise<void> {
-  const toFinalCanvas = async (code: string) => {
+  const toFinalBlob = async (code: string): Promise<Blob> => {
     const canvas = await renderQrToCanvas(code, resolution, style);
-    return targetSize ? resizeCanvas(canvas, targetSize.w, targetSize.h) : canvas;
+    const sized = targetSize ? resizeCanvas(canvas, targetSize.w, targetSize.h) : canvas;
+    let blob = await new Promise<Blob>((res) => sized.toBlob((b) => res(b!), 'image/png'));
+    if (dpi) blob = await injectPngDpi(blob, dpi);
+    return blob;
   };
 
   // Single code → direct PNG download (no ZIP wrapper)
   if (codes.length === 1) {
-    const canvas = await toFinalCanvas(codes[0]);
     onProgress(80);
-    const blob = await new Promise<Blob>((res) =>
-      canvas.toBlob((b) => res(b!), 'image/png'),
-    );
+    const blob = await toFinalBlob(codes[0]);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1195,12 +990,9 @@ async function generateImagesZip(
   const folder = zip.folder('QR-Codes')!;
 
   for (let i = 0; i < codes.length; i++) {
-    const canvas = await toFinalCanvas(codes[i]);
-    const blob = await new Promise<Blob>((res) =>
-      canvas.toBlob((b) => res(b!), 'image/png'),
-    );
+    const blob = await toFinalBlob(codes[i]);
     folder.file(`QR-${codes[i]}.png`, blob);
-    onProgress(((i + 1) / codes.length) * 90); // 0–90% for rendering
+    onProgress(((i + 1) / codes.length) * 90);
   }
 
   // 90–100% for ZIP compression
