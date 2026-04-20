@@ -554,12 +554,9 @@ html {
   border-radius: 8px !important;
   width: 22px !important;
   height: 22px !important;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity 180ms ease, background 180ms ease, transform 180ms ease;
   backdrop-filter: blur(4px);
-}
-[data-sonner-toast]:hover [data-close-button] {
-  opacity: 0.8;
 }
 [data-sonner-toast] [data-close-button]:hover {
   opacity: 1;
