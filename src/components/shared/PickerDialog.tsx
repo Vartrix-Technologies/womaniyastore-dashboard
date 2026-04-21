@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -60,6 +60,18 @@ export function PickerDialog({
   initialSearchValue = '',
 }: PickerDialogProps) {
   const [search, setSearch] = useState('');
+
+  const filteredItems = useMemo(() => {
+    const searchTerm = search.trim().toLowerCase();
+
+    if (!searchTerm) return items;
+
+    return items.filter((item) => {
+      const label = item.label.toLowerCase();
+      const sublabel = item.sublabel?.toLowerCase() || '';
+      return label.includes(searchTerm) || sublabel.includes(searchTerm);
+    });
+  }, [items, search]);
 
   // Reset search when dialog opens
   useEffect(() => {
@@ -128,34 +140,36 @@ export function PickerDialog({
           </div>
         </DialogHeader>
 
-        <Command className="border rounded-md">
+        <Command shouldFilter={false} className="border rounded-md">
           <CommandInput
             placeholder={searchPlaceholder}
             value={search}
             onValueChange={setSearch}
           />
           <CommandList className="max-h-[55dvh]">
-            <CommandEmpty>
-              {allowCreate && search.trim() ? (
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
-                  onClick={handleCreate}
-                  disabled={creating}
-                >
-                  {creating
-                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                    : <Plus className="h-3 w-3" />}
-                  {createLabel} &quot;{search.trim()}&quot;
-                </button>
-              ) : (
-                <span className="text-muted-foreground text-xs px-3">
-                  {allowCreate ? 'Type to search or create' : 'No results found'}
-                </span>
-              )}
-            </CommandEmpty>
-            <CommandGroup heading={groupHeading}>
-              {items.map((item) => (
+            {filteredItems.length === 0 ? (
+              <CommandEmpty>
+                {allowCreate && search.trim() ? (
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-accent rounded flex items-center gap-2"
+                    onClick={handleCreate}
+                    disabled={creating}
+                  >
+                    {creating
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <Plus className="h-3 w-3" />}
+                    {createLabel} &quot;{search.trim()}&quot;
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground text-xs px-3">
+                    {allowCreate ? 'Type to search or create' : 'No results found'}
+                  </span>
+                )}
+              </CommandEmpty>
+            ) : (
+              <CommandGroup heading={groupHeading}>
+                {filteredItems.map((item) => (
                 <CommandItem
                   key={item.id}
                   value={item.label + (item.sublabel ? ` ${item.sublabel}` : '')}
@@ -175,8 +189,9 @@ export function PickerDialog({
                     </span>
                   )}
                 </CommandItem>
-              ))}
-            </CommandGroup>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </DialogContent>

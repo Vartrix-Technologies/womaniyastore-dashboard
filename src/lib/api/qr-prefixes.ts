@@ -2,6 +2,15 @@
 import { supabase } from '@/lib/supabase';
 import type { QrPrefix } from '@/types';
 
+function sortQrPrefixes(prefixes: QrPrefix[]): QrPrefix[] {
+  return [...prefixes].sort((left, right) =>
+    left.prefix.localeCompare(right.prefix, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+  );
+}
+
 export interface QrPrefixStats {
   total: number;
   unused: number;
@@ -18,10 +27,10 @@ export async function fetchQrPrefixes(shopId: string) {
     .from('qr_prefixes')
     .select('*')
     .eq('shop_id', shopId)
-    .order('display_order', { ascending: true });
+    .order('prefix', { ascending: true });
 
   if (error) throw error;
-  return data as QrPrefix[];
+  return sortQrPrefixes((data || []) as QrPrefix[]);
 }
 
 /**
@@ -33,10 +42,10 @@ export async function fetchActiveQrPrefixes(shopId: string) {
     .select('*')
     .eq('shop_id', shopId)
     .eq('is_active', true)
-    .order('display_order', { ascending: true });
+    .order('prefix', { ascending: true });
 
   if (error) throw error;
-  return data as QrPrefix[];
+  return sortQrPrefixes((data || []) as QrPrefix[]);
 }
 
 /**

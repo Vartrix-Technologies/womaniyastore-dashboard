@@ -14,14 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CountUp } from '@/components/shared/CountUp';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { QrCodeDetailsDialog } from '@/components/shared/QrCodeDetailsDialog';
+import { PickerDialog } from '@/components/shared/PickerDialog';
 import { QrCodeDownloadDialog } from '@/components/shared/QrCodeDownloadDialog';
 import { downloadQrCode } from '@/components/shared/QrCodeCard';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { toast } from 'sonner';
-import { QrCode as QrCodeIcon, Plus, Download, Search, ArrowLeft, Trash2, RefreshCw, Eye, Printer, Tags, Filter, CircleOff, ChevronDown, Check, Settings, ChevronsUpDown } from 'lucide-react';
+import Link from 'next/link';
+import { QrCode as QrCodeIcon, Plus, Download, Search, ArrowLeft, Trash2, RefreshCw, Eye, Printer, Tags, Filter, CircleOff, ChevronDown, Settings, Settings2, ChevronsUpDown } from 'lucide-react';
 import { exportToCSV } from '@/lib/utils';
 import { useServerPagination, useSortableTable, useDebouncedSearch, useDateFilter } from '@/hooks';
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter';
@@ -95,7 +95,7 @@ export default function QrCodesPage() {
 
   // Generation form
   const [generateOpen, setGenerateOpen] = useState(false);
-  const [prefixPopoverOpen, setPrefixPopoverOpen] = useState(false);
+  const [prefixPickerOpen, setPrefixPickerOpen] = useState(false);
   const [selectedPrefixId, setSelectedPrefixId] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
 
@@ -676,61 +676,42 @@ export default function QrCodesPage() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">QR Prefix *</Label>
-                      <Popover open={prefixPopoverOpen} onOpenChange={setPrefixPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={prefixPopoverOpen}
-                            className="w-full justify-between font-normal"
-                          >
-                            {selectedPrefixId ? (
-                              <span>
-                                <span className="font-mono font-bold">
-                                  {qrPrefixes.find(p => p.id === selectedPrefixId)?.prefix}
-                                </span>
-                                {qrPrefixes.find(p => p.id === selectedPrefixId)?.description && (
-                                  <span className="ml-2 text-muted-foreground text-xs">
-                                    ({qrPrefixes.find(p => p.id === selectedPrefixId)?.description})
-                                  </span>
-                                )}
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">QR Prefix *</Label>
+                        <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline flex items-center gap-1">
+                          <Settings2 className="h-3 w-3" /> Manage
+                        </Link>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between font-normal"
+                        onClick={() => setPrefixPickerOpen(true)}
+                      >
+                        {selectedPrefixId ? (
+                          <span>
+                            <span className="font-mono font-bold">
+                              {qrPrefixes.find(p => p.id === selectedPrefixId)?.prefix}
+                            </span>
+                            {qrPrefixes.find(p => p.id === selectedPrefixId)?.description && (
+                              <span className="ml-2 text-muted-foreground text-xs">
+                                ({qrPrefixes.find(p => p.id === selectedPrefixId)?.description})
                               </span>
-                            ) : (
-                              <span className="text-muted-foreground">Select prefix...</span>
                             )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search prefixes..." />
-                            <CommandList>
-                              <CommandEmpty>No prefix found.</CommandEmpty>
-                              <CommandGroup>
-                                {qrPrefixes.map((prefix) => (
-                                  <CommandItem
-                                    key={prefix.id}
-                                    value={`${prefix.prefix} ${prefix.description || ''}`}
-                                    onSelect={() => {
-                                      setSelectedPrefixId(prefix.id === selectedPrefixId ? '' : prefix.id);
-                                      setPrefixPopoverOpen(false);
-                                    }}
-                                  >
-                                    <Check className={`mr-2 h-4 w-4 ${selectedPrefixId === prefix.id ? 'opacity-100' : 'opacity-0'}`} />
-                                    <span className="font-mono font-bold">{prefix.prefix}</span>
-                                    {prefix.description && (
-                                      <span className="ml-2 text-muted-foreground text-xs">
-                                        ({prefix.description})
-                                      </span>
-                                    )}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Select prefix...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                      <PickerDialog
+                        open={prefixPickerOpen}
+                        onOpenChange={setPrefixPickerOpen}
+                        title="Select QR Prefix"
+                        searchPlaceholder="Search prefixes..."
+                        items={qrPrefixes.map(p => ({ id: p.id, label: p.prefix, sublabel: p.description || undefined, mono: true }))}
+                        selectedId={selectedPrefixId}
+                        onSelect={(id) => setSelectedPrefixId(id)}
+                      />
                       <p className="text-xs text-muted-foreground">
                         Codes will be generated as {qrPrefixes.find(p => p.id === selectedPrefixId)?.prefix || 'PREFIX'}-0001, {qrPrefixes.find(p => p.id === selectedPrefixId)?.prefix || 'PREFIX'}-0002, ...
                       </p>
@@ -760,7 +741,7 @@ export default function QrCodesPage() {
                       <Plus className="mr-2 h-4 w-4" />
                       {generating ? 'Generating...' : 'Generate'}
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className="text-xs text-muted-foreground"
@@ -768,7 +749,7 @@ export default function QrCodesPage() {
                     >
                       <Settings className="mr-1 h-3.5 w-3.5" />
                       Manage Prefixes
-                    </Button>
+                    </Button> */}
                   </div>
                 </>
               )}
