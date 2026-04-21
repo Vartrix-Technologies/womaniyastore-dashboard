@@ -631,17 +631,30 @@ export default function QrCodesPage() {
       {/* Generate Form — collapsible */}
       <Collapsible open={generateOpen} onOpenChange={setGenerateOpen}>
         <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer select-none hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between">
+          <CardHeader className="py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <CollapsibleTrigger className="flex items-center justify-between flex-1 text-left cursor-pointer select-none hover:opacity-75 transition-opacity">
                 <div>
                   <CardTitle className="text-lg">Generate New QR Codes</CardTitle>
                   <CardDescription>Bulk generate QR codes with managed prefixes</CardDescription>
                 </div>
-                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${generateOpen ? 'rotate-180' : ''}`} />
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
+                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 mr-2 ${generateOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <Button
+                onClick={() => {
+                  const codesToDownload = qrCodes.map(qr => qr.code);
+                  setDownloadCodes(codesToDownload);
+                  setDownloadDialogOpen(true);
+                }}
+                variant="outline"
+                size="sm"
+                className={`${s.linkColor} ${s.linkHover} shrink-0 w-full sm:w-auto`}
+              >
+                <Printer className="mr-1.5 h-3.5 w-3.5" />
+                Print QR Codes
+              </Button>
+            </div>
+          </CardHeader>
           <CollapsibleContent>
             <CardContent>
               {qrPrefixes.length === 0 ? (
@@ -806,16 +819,28 @@ export default function QrCodesPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="space-y-4">
-            {/* Title row + action buttons */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Title row + CSV — always visible on all screen sizes */}
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-lg">QR Codes</CardTitle>
                 <CardDescription className="text-sm mt-0.5">
                   {totalCount} codes{filterPrefix !== 'all' ? ` in ${filterPrefix}` : ''}{filterStatus !== 'all' ? ` (${filterStatus})` : ''}
                 </CardDescription>
               </div>
+              <Button
+                onClick={exportQrCodes}
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                CSV
+              </Button>
+            </div>
+
+            {/* Conditional selection / bulk-delete actions */}
+            {(selectedIds.size > 0 || (filterStatus === 'unused' && selectedIds.size === 0)) && (
               <div className="flex flex-wrap items-center gap-2">
-                {/* Selection actions */}
                 {selectedIds.size > 0 && (
                   <>
                     <Button
@@ -855,31 +880,8 @@ export default function QrCodesPage() {
                     Delete All Unused
                   </Button>
                 )}
-
-                {/* Single unified Print button */}
-                <Button
-                  onClick={() => {
-                    const codesToDownload = qrCodes.map(qr => qr.code);
-                    setDownloadCodes(codesToDownload);
-                    setDownloadDialogOpen(true);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className={`${s.linkColor} ${s.linkHover}`}
-                >
-                  <Printer className="mr-1.5 h-3.5 w-3.5" />
-                  Print QR Codes
-                </Button>
-                <Button
-                  onClick={exportQrCodes}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  CSV
-                </Button>
               </div>
-            </div>
+            )}
 
             {/* Filters row — search + prefix dropdown */}
             <div className="flex flex-col sm:flex-row gap-3">
