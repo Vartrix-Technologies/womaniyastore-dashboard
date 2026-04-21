@@ -33,11 +33,13 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  Settings2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import type { QrPrefix } from '@/types';
+import Link from 'next/link';
 import {
   type QrStyleOptions,
   type DotStyle,
@@ -287,7 +289,12 @@ export function QrCodeDownloadDialog({
                 <Label className="font-semibold">Custom Range</Label>
                 <div className="space-y-3 p-3 rounded-lg bg-muted/50">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Prefix</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Prefix</Label>
+                      <Link href="/settings?tab=qr-prefixes" className="text-xs text-muted-foreground hover:text-foreground hover:underline flex items-center gap-1">
+                        <Settings2 className="h-3 w-3" /> Manage
+                      </Link>
+                    </div>
                     {prefixes.length > 0 ? (
                       <>
                         <Button
