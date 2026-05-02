@@ -346,6 +346,15 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
 
   const handleConfirmDeleteLot = async () => {
     if (!deletingLot) return;
+    // Reset QR codes to 'unused' BEFORE deleting items so they can be reassigned
+    const qrIds = deletingLot.items.map(i => i.qr_codes?.id).filter(Boolean) as string[];
+    if (qrIds.length > 0) {
+      const { error: qrResetError } = await supabase
+        .from('qr_codes')
+        .update({ status: 'unused', assigned_at: null })
+        .in('id', qrIds);
+      if (qrResetError) { toast.error('Failed to reset QR codes'); return; }
+    }
     const { error: itemsError } = await supabase
       .from('inventory_items')
       .delete()
@@ -364,6 +373,14 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
 
   const handleConfirmDeleteItem = async () => {
     if (!deletingItem) return;
+    // Reset QR code to 'unused' BEFORE deleting so it can be reassigned
+    if (deletingItem.qr_codes?.id) {
+      const { error: qrResetError } = await supabase
+        .from('qr_codes')
+        .update({ status: 'unused', assigned_at: null })
+        .eq('id', deletingItem.qr_codes.id);
+      if (qrResetError) { toast.error('Failed to reset QR code'); return; }
+    }
     const { error } = await supabase
       .from('inventory_items')
       .delete()
