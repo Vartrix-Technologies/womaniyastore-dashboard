@@ -90,6 +90,7 @@ function FinancesPageContent() {
   const [transactions, setTransactions] = useState<FinancialTransactionForList[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [categoryBreakdown, setCategoryBreakdown] = useState<{ category: string; amount: number; count: number; color: string }[]>([]);
+  const [inventoryData, setInventoryData] = useState<any[]>([]);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -259,7 +260,8 @@ function FinancesPageContent() {
           .from('inventory_items')
           .select(`
             id,
-            cost_price
+            cost_price,
+            selling_price
           `)
           .eq('shop_id', profile.shop_id)
           .eq('status', 'available'),
@@ -325,7 +327,7 @@ function FinancesPageContent() {
       };
       setSummary(newSummary);
       setCachedStats('finance_summary', newSummary);
-
+      setInventoryData(inventoryResult.data || []);
       setTransactions(transactionsData || []);
       setTotalCount(count || 0);
 
@@ -688,7 +690,12 @@ function FinancesPageContent() {
             value: <CountUp end={summary.inventoryValue} prefix="₹" />,
             icon: Package,
             iconColor: 'text-orange-600',
-            subtitle: 'Items still in store (at cost)',
+            subtitle: (() => {
+              const sellingValue = inventoryData.reduce((sum: number, item: any) => sum + (item.selling_price || 0), 0);
+              const costValue = summary.inventoryValue;
+              const potentialProfit = sellingValue - costValue;
+              return `₹${Math.round(costValue).toLocaleString()} cost | ₹${Math.round(sellingValue).toLocaleString()} sell | ₹${Math.round(Math.max(0, potentialProfit)).toLocaleString()} profit estimated`;
+            })(),
           },
         ]}
       />

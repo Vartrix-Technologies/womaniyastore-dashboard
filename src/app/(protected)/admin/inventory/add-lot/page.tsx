@@ -281,10 +281,21 @@ export default function AddStockLotPage() {
       const result = await addStockLot(requestPayload);
 
       const categoryName = categories.find(c => c.id === data.category_id)?.name || 'items';
-      const prefixLabel = qrPrefixes.find(p => p.id === data.prefix_id)?.prefix || '';
 
-      toast.success(`Successfully added ${result.items.length} ${categoryName} to inventory`, {
-        description: `QR prefix assigned: ${prefixLabel}`,
+      // Build assigned range (codes are zero-padded so lex sort == numeric sort)
+      const assignedCodes = result.items.map(i => i.qr_code).sort();
+      const first = assignedCodes[0] ?? '';
+      const last = assignedCodes[assignedCodes.length - 1] ?? '';
+      const codeRange = assignedCodes.length > 1 ? `${first} → ${last}` : first;
+
+      // Fetch remaining unused count for this prefix after the lot was created
+      const remaining = profile?.shop_id
+        ? await getUnusedQrCodeCount(profile.shop_id, data.prefix_id).catch(() => null)
+        : null;
+      const remainingText = remaining !== null ? ` • ${remaining} QR-codes remaining` : '';
+
+      toast.success(`${result.items.length} ${categoryName} added to inventory`, {
+        description: `Assigned: ${codeRange}${remainingText}`,
         duration: 4000
       });
       router.push('/admin/inventory');
@@ -667,7 +678,7 @@ export default function AddStockLotPage() {
                         const firstErrorKey = Object.keys(fieldErrors)[0];
                         const domId = fieldIdMap[firstErrorKey] || firstErrorKey;
                         const el = document.getElementById(domId) ||
-                                   document.querySelector(`[name="${firstErrorKey}"]`);
+                          document.querySelector(`[name="${firstErrorKey}"]`);
                         if (el) {
                           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           if (el instanceof HTMLElement) el.focus();
