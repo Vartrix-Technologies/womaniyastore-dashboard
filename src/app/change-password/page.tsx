@@ -124,7 +124,7 @@ export default function ChangePasswordPage() {
         }
       }
 
-      toast.success('Password changed successfully! Welcome to Womaniya Dashboard.');
+      toast.success(`Password changed successfully! Welcome to ${appConfig.brand.fullName}.`);
       
       // Refresh profile to get updated must_change_password status
       await refreshProfile();

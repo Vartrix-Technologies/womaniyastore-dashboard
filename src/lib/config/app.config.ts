@@ -23,7 +23,7 @@ export const appConfig = {
     /** App tagline/description */
     description: 'Point of Sale and Inventory Management System',
     /** Single letter/character for logo avatar */
-    logoLetter: 'W',
+    logoLetter: 'WA',
   },
 
   /**
@@ -198,10 +198,14 @@ export const appConfig = {
   billing: {
     /** Header text on receipts (usually uppercase) */
     receiptHeader: 'WOMANIYA',
-    /** Logo image path (relative to public folder) */
-    logoPath: '/womaniya_logo_lightbg.png',
+    /** Logo image path for light backgrounds (relative to public folder) */
+    logoPath: '/brand_logo_lightbg.png',
+    /** Logo image path for dark backgrounds (relative to public folder) */
+    logoDarkPath: '/brand_logo_darkbg.png',
     /** Alt text for logo image */
     logoAlt: 'Womaniya Logo',
+    /** Tagline shown on receipts and billing materials */
+    tagline: 'Fashion Forward. Always.',
   },
 
   /**
@@ -213,6 +217,18 @@ export const appConfig = {
     idbName: 'womaniya-dashboard',
     /** Application header for API requests */
     apiAppName: 'womaniya-dashboard',
+    /** localStorage key for remembering the last used login email */
+    lastEmailKey: 'womaniya_last_email',
+    /** localStorage key for the cached user profile */
+    profileCacheKey: 'womaniya_cached_profile',
+    /** localStorage key for the selected color palette */
+    colorPaletteKey: 'womaniya-color-palette',
+    /** localStorage key for the last inventory cache timestamp */
+    inventoryCacheTimestampKey: 'womaniya-inventory-cache-timestamp',
+    /** localStorage key for the POS cart */
+    cartStorageKey: 'womaniya-pos-cart',
+    /** Prefix for backup file downloads */
+    backupFilePrefix: 'womaniya-backup',
   },
 } as const;
 

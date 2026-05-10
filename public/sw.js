@@ -11,14 +11,15 @@
  * - Background sync support
  */
 
-const CACHE_NAME = 'womaniya-v1';
+// Update version number (e.g., 'app-v2') to bust cache on next deploy.
+const CACHE_NAME = 'app-v1';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to pre-cache during install
 const PRECACHE_ASSETS = [
   '/',
   '/offline.html',
-  '/manifest.json',
+  '/manifest.webmanifest',
   '/icons/icon-192x192.svg',
   '/icons/icon-512x512.svg',
 ];
@@ -165,7 +166,8 @@ self.addEventListener('fetch', (event) => {
 // ── Push Notification Event (future use) ──────────────────
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {};
-  const title = data.title || 'Womaniya Dashboard';
+  // WHITE-LABEL: update this fallback title to match your brand
+  const title = data.title || 'App';
   const options = {
     body: data.body || 'New notification',
     icon: '/icons/icon-192x192.svg',

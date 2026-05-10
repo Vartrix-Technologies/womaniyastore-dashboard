@@ -620,7 +620,7 @@ export function QrCodeDownloadDialog({
                           showLogo: !!v,
                           ecLevel: v ? 'H' : s.ecLevel,
                           // Default to light variant when enabling
-                          logoUrl: v ? '/womaniya_logo_lightbg.png' : s.logoUrl,
+                          logoUrl: v ? appConfig.billing.logoPath : s.logoUrl,
                         }))
                       }
                     />
@@ -635,15 +635,15 @@ export function QrCodeDownloadDialog({
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setStyle((s) => ({ ...s, logoUrl: '/womaniya_logo_lightbg.png' }))}
+                          onClick={() => setStyle((s) => ({ ...s, logoUrl: appConfig.billing.logoPath }))}
                           className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-left transition-all ${
-                            style.logoUrl === '/womaniya_logo_lightbg.png'
+                            style.logoUrl === appConfig.billing.logoPath
                               ? `${a.borderStrong} ${a.bg} ${a.bgDarkSolid}`
                               : 'border-muted hover:border-muted-foreground/30'
                           }`}
                         >
                           <div className="h-8 w-8 rounded-full bg-white border flex items-center justify-center overflow-hidden">
-                            <img src="/womaniya_logo_lightbg.png" alt="Light" className="h-7 w-7 object-cover rounded-full" />
+                            <img src={appConfig.billing.logoPath} alt="Light" className="h-7 w-7 object-cover rounded-full" />
                           </div>
                           <div>
                             <div className="text-xs font-medium flex items-center gap-1"><Sun className="h-3 w-3" /> Light</div>
@@ -652,15 +652,15 @@ export function QrCodeDownloadDialog({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setStyle((s) => ({ ...s, logoUrl: '/womaniya_logo_darkbg.png' }))}
+                          onClick={() => setStyle((s) => ({ ...s, logoUrl: appConfig.billing.logoDarkPath }))}
                           className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-left transition-all ${
-                            style.logoUrl === '/womaniya_logo_darkbg.png'
+                            style.logoUrl === appConfig.billing.logoDarkPath
                               ? `${a.borderStrong} ${a.bg} ${a.bgDarkSolid}`
                               : 'border-muted hover:border-muted-foreground/30'
                           }`}
                         >
                           <div className="h-8 w-8 rounded-full bg-gray-900 border flex items-center justify-center overflow-hidden">
-                            <img src="/womaniya_logo_darkbg.png" alt="Dark" className="h-7 w-7 object-cover rounded-full" />
+                            <img src={appConfig.billing.logoDarkPath} alt="Dark" className="h-7 w-7 object-cover rounded-full" />
                           </div>
                           <div>
                             <div className="text-xs font-medium flex items-center gap-1"><Moon className="h-3 w-3" /> Dark</div>

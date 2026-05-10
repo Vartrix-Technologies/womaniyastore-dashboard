@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { appConfig } from '@/lib/config/app.config';
 
 interface BrandLoaderProps {
   /** Text shown below the logo (e.g. "Loading your dashboard...") */
@@ -31,12 +32,12 @@ export function BrandLoader({
       <div className="text-center space-y-5">
         <div className="w-20 h-20 mx-auto rounded-full overflow-hidden shadow-lg">
           <img
-            src="/womaniya_logo_darkbg.png"
+            src={appConfig.billing.logoDarkPath}
             alt="Loading"
             className="w-full h-full object-cover animate-pulse drop-shadow-lg dark:hidden"
           />
           <img
-            src="/womaniya_logo_lightbg.png"
+            src={appConfig.billing.logoPath}
             alt="Loading"
             className="w-full h-full object-cover animate-pulse drop-shadow-lg hidden dark:block"
           />

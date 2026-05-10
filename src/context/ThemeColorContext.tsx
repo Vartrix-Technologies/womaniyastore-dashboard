@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { appConfig } from '@/lib/config/app.config';
 
 /* ── Palette definitions ──────────────────────────────────────────────── */
 
@@ -114,7 +115,7 @@ export const COLOR_PALETTES: Record<PaletteId, ColorPalette> = {
   },
 };
 
-const STORAGE_KEY = 'womaniya-color-palette';
+const STORAGE_KEY = appConfig.internal.colorPaletteKey;
 const DEFAULT_PALETTE: PaletteId = 'ocean';
 
 /* ── Context ──────────────────────────────────────────────────────────── */

@@ -19,6 +19,7 @@ import {
 } from './db';
 import { OFFLINE_CONFIG } from './config';
 import { supabase } from '@/lib/supabase';
+import { appConfig } from '@/lib/config/app.config';
 
 export interface CachedInventoryItem {
   qrCode: string;
@@ -37,7 +38,7 @@ export interface CachedInventoryItem {
 }
 
 // Track last full cache time to enable delta sync
-const LAST_CACHE_KEY = 'womaniya-inventory-cache-timestamp';
+const LAST_CACHE_KEY = appConfig.internal.inventoryCacheTimestampKey;
 
 function getLastCacheTimestamp(): string | null {
   if (typeof window === 'undefined') return null;

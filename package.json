@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:white-label": "node scripts/check-white-label.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

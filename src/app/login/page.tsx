@@ -18,7 +18,7 @@ import { Eye, EyeOff } from 'lucide-react';
 const s = appConfig.styles;
 const a = s.accent;
 
-const LAST_EMAIL_KEY = 'womaniya_last_email';
+const LAST_EMAIL_KEY = appConfig.internal.lastEmailKey;
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -92,8 +92,8 @@ export default function LoginPage() {
           <div className="flex justify-center mb-2">
             <div className={`w-30 h-30 rounded-full overflow-hidden bg-white shadow-lg ring-4 ${a.ring}`}>
               <Image
-                src="/womaniya_logo_darkbg.png"
-                alt="Womaniya Logo"
+                src={appConfig.billing.logoPath}
+                alt={appConfig.billing.logoAlt}
                 width={200}
                 height={200}
                 className="object-cover"
@@ -103,7 +103,7 @@ export default function LoginPage() {
           
           {/* Title - text-2xl per checklist */}
           <CardTitle className={`text-2xl font-bold ${s.primaryGradient} bg-clip-text text-transparent`}>
-            Womaniya Dashboard
+            {appConfig.brand.fullName}
           </CardTitle>
           
           {/* Description - text-sm per checklist */}

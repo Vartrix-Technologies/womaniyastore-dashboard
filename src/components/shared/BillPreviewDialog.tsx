@@ -258,7 +258,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
     let printHTML = '';
 
     if (layoutType === 'a4') {
-      // A4 Layout — rose-branded design matching the bill image
+      // A4 Layout — themed design using bc.* palette variables
       const a4ItemsHTML = saleItems.map((item: any, index: number) => {
         const hasSaleType = item.sold_on_sale && item.sale_type;
         const isManual = !item.inventory_item_id;
@@ -269,12 +269,12 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         const hasDiscount = item.original_price !== item.final_price;
         const isLast = index === saleItems.length - 1;
         const pricePart = hasDiscount
-          ? `<p style="font-size:0.875rem;color:#c4869c;text-decoration:line-through;margin:0;">${formatCurrency(item.original_price)}</p><p style="font-size:1.125rem;font-weight:bold;color:#16a34a;margin:0;">${formatCurrency(item.final_price)}</p><p style="font-size:0.75rem;color:#ea580c;margin:0;">–${formatCurrency(item.original_price - item.final_price)}</p>`
-          : `<p style="font-size:1.125rem;font-weight:600;color:#3d0a19;margin:0;">${formatCurrency(item.final_price)}</p>`;
+          ? `<p style="font-size:0.875rem;color:${bc.accentMuted};text-decoration:line-through;margin:0;">${formatCurrency(item.original_price)}</p><p style="font-size:1.125rem;font-weight:bold;color:#16a34a;margin:0;">${formatCurrency(item.final_price)}</p><p style="font-size:0.75rem;color:#ea580c;margin:0;">–${formatCurrency(item.original_price - item.final_price)}</p>`
+          : `<p style="font-size:1.125rem;font-weight:600;color:${bc.textDark};margin:0;">${formatCurrency(item.final_price)}</p>`;
         const saleBadge = hasSaleType
-          ? `<span style="display:inline-block;font-size:0.75rem;font-weight:600;text-transform:uppercase;padding:2px 8px;border-radius:4px;border:1px solid;margin-top:5px;${item.sale_type === 'festival' ? 'background:#dcfce7;border-color:#86efac;color:#15803d;' : item.sale_type === 'clearance' ? 'background:#fee2e2;border-color:#fca5a5;color:#991b1b;' : 'background:#fce7f3;border-color:#f9a8c4;color:#9d174d;'}">${item.sale_type === 'festival' ? '✦ Festival' : item.sale_type === 'clearance' ? '✦ Clearance' : '✦ Promotion'}</span>` : '';
+          ? `<span style="display:inline-block;font-size:0.75rem;font-weight:600;text-transform:uppercase;padding:2px 8px;border-radius:4px;border:1px solid;margin-top:5px;${item.sale_type === 'festival' ? 'background:#dcfce7;border-color:#86efac;color:#15803d;' : item.sale_type === 'clearance' ? 'background:#fee2e2;border-color:#fca5a5;color:#991b1b;' : `background:#fce7f3;border-color:${bc.logoBorder};color:#9d174d;`}">${item.sale_type === 'festival' ? '✦ Festival' : item.sale_type === 'clearance' ? '✦ Clearance' : '✦ Promotion'}</span>` : '';
         const discountReason = (item.discount_reason && !isManual) ? `<p style="font-size:0.75rem;color:#ea580c;margin-top:4px;">${item.discount_reason}</p>` : '';
-        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;${isLast ? '' : 'border-bottom:1px solid #fce4ec;'}"><div style="flex:1;padding-right:16px;"><div style="display:flex;align-items:baseline;gap:8px;"><span style="font-weight:600;color:#8c2e56;">${index + 1}.</span><span style="font-weight:500;color:#3d0a19;">${itemName}</span></div>${qrCode ? `<p style="font-size:0.75rem;color:#c4869c;font-family:'Courier New',monospace;margin-top:4px;margin-bottom:0;">${qrCode}</p>` : ''}${saleBadge}${discountReason}</div><div style="text-align:right;flex-shrink:0;">${pricePart}</div></div>`;
+        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;${isLast ? '' : `border-bottom:1px solid ${bc.border};`}"><div style="flex:1;padding-right:16px;"><div style="display:flex;align-items:baseline;gap:8px;"><span style="font-weight:600;color:${bc.accent};">${index + 1}.</span><span style="font-weight:500;color:${bc.textDark};">${itemName}</span></div>${qrCode ? `<p style="font-size:0.75rem;color:${bc.accentMuted};font-family:'Courier New',monospace;margin-top:4px;margin-bottom:0;">${qrCode}</p>` : ''}${saleBadge}${discountReason}</div><div style="text-align:right;flex-shrink:0;">${pricePart}</div></div>`;
       }).join('');
 
       const a4SavingsHTML = (festivalSavings > 0 || clearanceSavings > 0 || promotionSavings > 0) ? `
@@ -303,7 +303,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
             padding: 20px;
             max-width: 800px;
             margin: 0 auto;
-            background: #fdf0f3;
+            background: ${bc.bg};
           }
           @media print {
             body { padding: 8mm; background: white; }
@@ -312,91 +312,91 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         </style>
       </head>
       <body>
-        <div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(94,26,56,0.15);">
+        <div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px ${bc.headerFrom}26;">
 
-          <!-- Rose branded header -->
-          <div style="background:linear-gradient(135deg,#5e1a38 0%,#8c2e56 55%,#5e1a38 100%);padding:28px 32px 22px;">
+          <!-- Themed branded header -->
+          <div style="background:linear-gradient(135deg,${bc.headerFrom} 0%,${bc.headerTo} 55%,${bc.headerFrom} 100%);padding:28px 32px 22px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
               <div style="flex:1;">
                 <div style="font-size:30px;font-weight:800;letter-spacing:3px;color:#ffffff;line-height:1;">${appConfig.billing.receiptHeader}</div>
-                <div style="font-size:11px;color:#e8a0b8;margin-top:6px;letter-spacing:2px;text-transform:uppercase;font-weight:500;">Fashion Forward. Always.</div>
-                ${shopDetails ? `<div style="font-size:12px;color:#d4869f;margin-top:8px;line-height:1.8;">${shopDetails.address ? `<span>${shopDetails.address}</span>` : ''}${shopDetails.phone ? `<span style="margin-left:12px;">${shopDetails.phone}</span>` : ''}${shopDetails.gst_number ? `<span style="margin-left:12px;">GST: ${shopDetails.gst_number}</span>` : ''}</div>` : ''}
+                <div style="font-size:11px;color:${bc.textOnHeaderSoft};margin-top:6px;letter-spacing:2px;text-transform:uppercase;font-weight:500;">${appConfig.billing.tagline}</div>
+                ${shopDetails ? `<div style="font-size:12px;color:${bc.textOnHeaderMuted};margin-top:8px;line-height:1.8;">${shopDetails.address ? `<span>${shopDetails.address}</span>` : ''}${shopDetails.phone ? `<span style="margin-left:12px;">${shopDetails.phone}</span>` : ''}${shopDetails.gst_number ? `<span style="margin-left:12px;">GST: ${shopDetails.gst_number}</span>` : ''}</div>` : ''}
               </div>
               <div style="flex-shrink:0;margin-left:24px;">
-                <div style="width:88px;height:88px;background:#fff5f7;border-radius:12px;border:2px solid #f9a8c4;overflow:hidden;padding:7px;display:flex;align-items:center;justify-content:center;">
+                <div style="width:88px;height:88px;background:${bc.logoBg};border-radius:12px;border:2px solid ${bc.logoBorder};overflow:hidden;padding:7px;display:flex;align-items:center;justify-content:center;">
                   <img src="${appConfig.billing.logoPath}" alt="" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                  <span style="display:none;font-size:2.25rem;font-weight:800;color:#5e1a38;">${appConfig.brand.logoLetter}</span>
+                  <span style="display:none;font-size:2.25rem;font-weight:800;color:${bc.headerFrom};">${appConfig.brand.logoLetter}</span>
                 </div>
               </div>
             </div>
             <!-- Invoice + date strip -->
-            <div style="border-top:1px solid #7a2547;padding-top:16px;display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="border-top:1px solid ${bc.headerDivider};padding-top:16px;display:flex;justify-content:space-between;align-items:flex-start;">
               <div>
-                <div style="font-size:10px;color:#e8a0b8;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:5px;">Invoice</div>
+                <div style="font-size:10px;color:${bc.textOnHeaderSoft};text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:5px;">Invoice</div>
                 <div style="font-size:20px;font-weight:700;color:#ffffff;font-family:'Courier New',monospace;letter-spacing:1px;">${billNumber}</div>
               </div>
               <div style="text-align:right;">
-                <div style="font-size:10px;color:#e8a0b8;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:5px;">Date</div>
-                <div style="font-size:14px;font-weight:600;color:#ffe4ef;">${formatDate(displaySale.created_at)}</div>
-                <div style="font-size:12px;color:#d4869f;margin-top:3px;">${formatTime(displaySale.created_at)}</div>
+                <div style="font-size:10px;color:${bc.textOnHeaderSoft};text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:5px;">Date</div>
+                <div style="font-size:14px;font-weight:600;color:${bc.textOnHeaderLight};">${formatDate(displaySale.created_at)}</div>
+                <div style="font-size:12px;color:${bc.textOnHeaderMuted};margin-top:3px;">${formatTime(displaySale.created_at)}</div>
               </div>
             </div>
           </div>
 
           <!-- Customer (if present) -->
           ${(displaySale.customer_name || displaySale.customer_phone) ? `
-          <div style="padding:14px 32px;background:#fff5f7;border-bottom:1px solid #fce4ec;">
-            <p style="font-size:10px;font-weight:700;color:#c4869c;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Billed To</p>
-            ${displaySale.customer_name ? `<p style="font-size:16px;font-weight:600;color:#3d0a19;margin-bottom:3px;">${displaySale.customer_name}</p>` : ''}
-            ${displaySale.customer_phone ? `<p style="font-size:13px;color:#9a6070;">${displaySale.customer_phone}</p>` : ''}
+          <div style="padding:14px 32px;background:${bc.logoBg};border-bottom:1px solid ${bc.border};">
+            <p style="font-size:10px;font-weight:700;color:${bc.accentMuted};text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Billed To</p>
+            ${displaySale.customer_name ? `<p style="font-size:16px;font-weight:600;color:${bc.textDark};margin-bottom:3px;">${displaySale.customer_name}</p>` : ''}
+            ${displaySale.customer_phone ? `<p style="font-size:13px;color:${bc.textMuted};">${displaySale.customer_phone}</p>` : ''}
           </div>
           ` : ''}
 
           <!-- Items -->
           <div style="padding:20px 32px 8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:2px solid #8c2e56;margin-bottom:4px;">
-              <div style="font-size:10px;font-weight:700;color:#8c2e56;text-transform:uppercase;letter-spacing:1.5px;">Description</div>
-              <div style="font-size:10px;font-weight:700;color:#8c2e56;text-transform:uppercase;letter-spacing:1.5px;">Amount</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:2px solid ${bc.accent};margin-bottom:4px;">
+              <div style="font-size:10px;font-weight:700;color:${bc.accent};text-transform:uppercase;letter-spacing:1.5px;">Description</div>
+              <div style="font-size:10px;font-weight:700;color:${bc.accent};text-transform:uppercase;letter-spacing:1.5px;">Amount</div>
             </div>
             ${a4ItemsHTML}
           </div>
 
           <!-- Totals -->
-          <div style="margin:8px 20px 20px;background:#fff5f7;border-radius:12px;padding:16px 18px;border:1px solid #fce4ec;">
+          <div style="margin:8px 20px 20px;background:${bc.logoBg};border-radius:12px;padding:16px 18px;border:1px solid ${bc.border};">
             ${displaySale.subtotal_amount !== displaySale.total_amount ? `
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:10px;">
-              <span style="color:#9a6070;">Subtotal</span>
-              <span style="font-weight:600;color:#3d0a19;">${formatCurrency(displaySale.subtotal_amount)}</span>
+              <span style="color:${bc.textMuted};">Subtotal</span>
+              <span style="font-weight:600;color:${bc.textDark};">${formatCurrency(displaySale.subtotal_amount)}</span>
             </div>` : ''}
             ${displaySale.total_discount > 0 ? `
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:10px;">
-              <span style="color:#9a6070;">Discount</span>
+              <span style="color:${bc.textMuted};">Discount</span>
               <span style="font-weight:600;color:#ea580c;">–${formatCurrency(displaySale.total_discount)}</span>
             </div>` : ''}
             ${displaySale.total_tax > 0 ? `
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:10px;">
-              <span style="color:#9a6070;">GST (${shopDetails?.tax_rate || 5}%)</span>
-              <span style="font-weight:600;color:#3d0a19;">${formatCurrency(displaySale.total_tax)}</span>
+              <span style="color:${bc.textMuted};">GST (${shopDetails?.tax_rate || 5}%)</span>
+              <span style="font-weight:600;color:${bc.textDark};">${formatCurrency(displaySale.total_tax)}</span>
             </div>` : ''}
-            <div style="background:linear-gradient(135deg,#5e1a38,#8c2e56);border-radius:9px;padding:14px 16px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="color:#fecdd3;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">Total Paid</span>
+            <div style="background:linear-gradient(135deg,${bc.headerFrom},${bc.headerTo});border-radius:9px;padding:14px 16px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="color:${bc.footerLabel};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">Total Paid</span>
               <span style="color:#ffffff;font-size:1.625rem;font-weight:800;">${formatCurrency(displaySale.total_amount)}</span>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #fce4ec;">
-              <span style="font-size:13px;color:#9a6070;">Payment Method</span>
-              <span style="font-size:13px;font-weight:700;text-transform:uppercase;color:#7c1342;letter-spacing:0.5px;">${displaySale.payment_method}</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid ${bc.border};">
+              <span style="font-size:13px;color:${bc.textMuted};">Payment Method</span>
+              <span style="font-size:13px;font-weight:700;text-transform:uppercase;color:${bc.textAccent};letter-spacing:0.5px;">${displaySale.payment_method}</span>
             </div>
           </div>
 
           <!-- Savings -->
           ${a4SavingsHTML}
 
-          <!-- Rose footer -->
-          <div style="background:linear-gradient(135deg,#5e1a38,#8c2e56);padding:24px 32px;text-align:center;">
+          <!-- Themed footer -->
+          <div style="background:linear-gradient(135deg,${bc.headerFrom},${bc.headerTo});padding:24px 32px;text-align:center;">
             <div style="font-size:16px;font-weight:700;color:#ffffff;margin-bottom:6px;">Thank you for shopping with us!</div>
-            <div style="font-size:13px;color:#e8a0b8;letter-spacing:0.5px;margin-bottom:16px;">We look forward to seeing you again.</div>
-            <div style="display:inline-block;border:1px dashed #7a2547;padding:7px 22px;border-radius:6px;">
-              <span style="font-family:'Courier New',monospace;font-size:12px;color:#d4869f;letter-spacing:2px;">${billNumber}</span>
+            <div style="font-size:13px;color:${bc.textOnHeaderSoft};letter-spacing:0.5px;margin-bottom:16px;">We look forward to seeing you again.</div>
+            <div style="display:inline-block;border:1px dashed ${bc.headerDivider};padding:7px 22px;border-radius:6px;">
+              <span style="font-family:'Courier New',monospace;font-size:12px;color:${bc.textOnHeaderMuted};letter-spacing:2px;">${billNumber}</span>
             </div>
           </div>
 
@@ -481,7 +481,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         <!-- Header -->
         <div style="text-align: center; padding: 8px 0 10px; border-bottom: 2px solid #000;">
           <div style="font-size: ${layoutType === 'thermal-80mm' ? '20px' : '15px'}; font-weight: bold; letter-spacing: 3px; margin-bottom: 4px;">${appConfig.billing.receiptHeader}</div>
-          <div style="font-size: ${layoutType === 'thermal-80mm' ? '10px' : '8px'}; font-style: italic; letter-spacing: 1px;">— Fashion Forward. Always. —</div>
+          <div style="font-size: ${layoutType === 'thermal-80mm' ? '10px' : '8px'}; font-style: italic; letter-spacing: 1px;">— ${appConfig.billing.tagline} —</div>
           ${shopDetails ? `
             <div style="font-size: ${layoutType === 'thermal-80mm' ? '9px' : '8px'}; margin-top: 6px; line-height: 1.5;">
               ${shopDetails.address ? `<div>${shopDetails.address}</div>` : ''}${shopDetails.phone ? `<div>${shopDetails.phone}</div>` : ''}${shopDetails.gst_number ? `<div>GST: ${shopDetails.gst_number}</div>` : ''}
@@ -539,7 +539,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         <!-- Footer -->
         <div style="text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #000; font-size: ${layoutType === 'thermal-80mm' ? '10px' : '8px'};">
           <div style="font-weight: bold; margin-bottom: 3px;">Thank you for shopping with us!</div>
-          <div style="font-style: italic;">Fashion Forward. Always.</div>
+          <div style="font-style: italic;">${appConfig.billing.tagline}</div>
           <div style="margin-top: 8px; padding: 3px 10px; border: 1px dashed #000; display: inline-block;">${billNumber}</div>
         </div>
 
@@ -718,7 +718,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
               </div>
             </div>
             <h1 style="font-size: 1.875rem; font-weight: bold; letter-spacing: 0.1em; margin-bottom: 8px;">${appConfig.billing.receiptHeader}</h1>
-            <p style="font-size: 0.875rem; color: #6b7280; font-style: italic;">Fashion Forward. Always.</p>
+            <p style="font-size: 0.875rem; color: #6b7280; font-style: italic;">${appConfig.billing.tagline}</p>
             ${shopDetails ? `
               <div style="font-size: 0.875rem; color: #6b7280; margin-top: 12px;">
                 ${shopDetails.address ? `<p>${shopDetails.address}</p>` : ''}
@@ -795,7 +795,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
           <!-- Footer -->
           <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; margin-top: 24px;">
             <p style="font-weight: 600; font-size: 1.125rem; margin-bottom: 8px;">Thank you for shopping with us!</p>
-            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 16px;">Visit again. Fashion Forward. Always.</p>
+            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 16px;">Visit again. ${appConfig.billing.tagline}</p>
             <div style="display: inline-block; border: 2px dashed #d1d5db; padding: 8px 16px; border-radius: 4px;">
               <p style="font-family: monospace; font-size: 0.75rem; color: #6b7280;">${billNumber}</p>
             </div>
@@ -890,7 +890,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
           `Thank you for shopping with us!\n\n` +
           `Regards,\n` +
           `${appConfig.brand.name}\n` +
-          `Fashion Forward. Always.`
+          `${appConfig.billing.tagline}`
         );
 
         const customerEmail = displaySale.customer_phone ? '' : ''; // Add customer email if available
@@ -929,10 +929,10 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         const qrCode = isManual ? '' : (item.inventory_items?.qr_codes?.code || item.qr_code || '');
         const hasDiscount = item.original_price !== item.final_price;
         const pricePart = hasDiscount
-          ? `<div style="font-size:10px;color:#c4869c;text-decoration:line-through;text-align:right;margin-bottom:1px;">${formatCurrency(item.original_price)}</div>
+          ? `<div style="font-size:10px;color:${bc.accentMuted};text-decoration:line-through;text-align:right;margin-bottom:1px;">${formatCurrency(item.original_price)}</div>
              <div style="font-size:14px;font-weight:700;color:#16a34a;text-align:right;line-height:1.1;">${formatCurrency(item.final_price)}</div>
              <div style="font-size:9px;color:#ea580c;text-align:right;margin-top:1px;">–${formatCurrency(item.original_price - item.final_price)}</div>`
-          : `<div style="font-size:14px;font-weight:700;color:#3d0a19;text-align:right;">${formatCurrency(item.final_price)}</div>`;
+          : `<div style="font-size:14px;font-weight:700;color:${bc.textDark};text-align:right;">${formatCurrency(item.final_price)}</div>`;
         const saleBadge = hasSaleType ? `<span style="display:inline-block;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 6px;border-radius:20px;margin-top:3px;${
           item.sale_type === 'festival' ? 'background:#dcfce7;color:#15803d;' :
           item.sale_type === 'clearance' ? 'background:#fee2e2;color:#991b1b;' :
@@ -940,10 +940,10 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         const reasonLine = (item.discount_reason && !isManual)
           ? `<div style="font-size:9px;color:#ea580c;margin-top:2px;">${item.discount_reason}</div>` : '';
         const isLast = index === imgSaleItems.length - 1;
-        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;${isLast ? '' : 'border-bottom:1px solid #fce4ec;'}">
+        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;${isLast ? '' : `border-bottom:1px solid ${bc.border};`}">
           <div style="flex:1;padding-right:10px;">
-            <div style="font-size:13px;font-weight:600;color:#3d0a19;line-height:1.4;">${itemName}</div>
-            ${qrCode ? `<div style="font-size:9px;color:#c4869c;font-family:'Courier New',monospace;margin-top:2px;letter-spacing:0.3px;">${qrCode}</div>` : ''}
+            <div style="font-size:13px;font-weight:600;color:${bc.textDark};line-height:1.4;">${itemName}</div>
+            ${qrCode ? `<div style="font-size:9px;color:${bc.accentMuted};font-family:'Courier New',monospace;margin-top:2px;letter-spacing:0.3px;">${qrCode}</div>` : ''}
             ${saleBadge}${reasonLine}
           </div>
           <div style="flex-shrink:0;text-align:right;">${pricePart}</div>
@@ -964,97 +964,97 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         </div>` : '';
 
       // Premium bill image HTML — isolated, no Tailwind, only hex colours
-      // Palette: muted dusty rose / mauve — feminine brand identity
+      // Uses bc.* palette values so the downloaded image matches the active theme
       const billPageHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-        <style>*{margin:0;padding:0;box-sizing:border-box;} body{background:#fdf0f3;}</style>
+        <style>*{margin:0;padding:0;box-sizing:border-box;} body{background:${bc.bg};}</style>
       </head><body>
-        <div style="font-family:'Segoe UI',system-ui,-apple-system,sans-serif;width:390px;padding:12px;background:#fdf0f3;">
-          <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(94,26,56,0.15);">
+        <div style="font-family:'Segoe UI',system-ui,-apple-system,sans-serif;width:390px;padding:12px;background:${bc.bg};">
+          <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px ${bc.headerFrom}26;">
 
-            <!-- ── Rose branded header ── -->
-            <div style="background:linear-gradient(135deg,#5e1a38 0%,#8c2e56 55%,#5e1a38 100%);padding:20px 20px 16px;">
+            <!-- ── Themed branded header ── -->
+            <div style="background:linear-gradient(135deg,${bc.headerFrom} 0%,${bc.headerTo} 55%,${bc.headerFrom} 100%);padding:20px 20px 16px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                 <div style="flex:1;">
                   <div style="font-size:20px;font-weight:800;letter-spacing:2px;color:#ffffff;line-height:1;">${appConfig.billing.receiptHeader}</div>
-                  <div style="font-size:9px;color:#e8a0b8;margin-top:5px;letter-spacing:2px;font-weight:500;text-transform:uppercase;">Fashion Forward. Always.</div>
-                  ${shopDetails ? `<div style="font-size:10px;color:#d4869f;margin-top:6px;line-height:1.6;">${shopDetails.address ? `<div>${shopDetails.address}</div>` : ''}${shopDetails.phone ? `<div>${shopDetails.phone}</div>` : ''}${shopDetails.gst_number ? `<div>GST: ${shopDetails.gst_number}</div>` : ''}</div>` : ''}
+                  <div style="font-size:9px;color:${bc.textOnHeaderSoft};margin-top:5px;letter-spacing:2px;font-weight:500;text-transform:uppercase;">${appConfig.billing.tagline}</div>
+                  ${shopDetails ? `<div style="font-size:10px;color:${bc.textOnHeaderMuted};margin-top:6px;line-height:1.6;">${shopDetails.address ? `<div>${shopDetails.address}</div>` : ''}${shopDetails.phone ? `<div>${shopDetails.phone}</div>` : ''}${shopDetails.gst_number ? `<div>GST: ${shopDetails.gst_number}</div>` : ''}</div>` : ''}
                 </div>
-                <!-- Logo on cream background so the black Womaniya mark pops -->
+                <!-- Logo on light background -->
                 <div style="flex-shrink:0;margin-left:14px;">
-                  <div style="width:64px;height:64px;background:#fff5f7;border-radius:10px;border:2px solid #f9a8c4;overflow:hidden;padding:5px;">
+                  <div style="width:64px;height:64px;background:${bc.logoBg};border-radius:10px;border:2px solid ${bc.logoBorder};overflow:hidden;padding:5px;">
                     <img src="${appConfig.billing.logoPath}" alt="" style="display:block;width:50px;height:50px;object-fit:contain;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                    <span style="display:none;font-size:1.6rem;font-weight:800;color:#5e1a38;line-height:50px;text-align:center;width:50px;">${appConfig.brand.logoLetter}</span>
+                    <span style="display:none;font-size:1.6rem;font-weight:800;color:${bc.headerFrom};line-height:50px;text-align:center;width:50px;">${appConfig.brand.logoLetter}</span>
                   </div>
                 </div>
               </div>
               <!-- Invoice + date strip -->
-              <div style="border-top:1px solid #7a2547;padding-top:14px;display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="border-top:1px solid ${bc.headerDivider};padding-top:14px;display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
-                  <div style="font-size:8px;color:#e8a0b8;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:4px;">Invoice</div>
+                  <div style="font-size:8px;color:${bc.textOnHeaderSoft};text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:4px;">Invoice</div>
                   <div style="font-size:15px;font-weight:700;color:#ffffff;font-family:'Courier New',monospace;letter-spacing:1px;">${billNumber}</div>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-size:8px;color:#e8a0b8;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:4px;">Date</div>
-                  <div style="font-size:12px;font-weight:600;color:#ffe4ef;">${formatDate(displaySale.created_at)}</div>
-                  <div style="font-size:10px;color:#d4869f;margin-top:2px;">${formatTime(displaySale.created_at)}</div>
+                  <div style="font-size:8px;color:${bc.textOnHeaderSoft};text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:4px;">Date</div>
+                  <div style="font-size:12px;font-weight:600;color:${bc.textOnHeaderLight};">${formatDate(displaySale.created_at)}</div>
+                  <div style="font-size:10px;color:${bc.textOnHeaderMuted};margin-top:2px;">${formatTime(displaySale.created_at)}</div>
                 </div>
               </div>
             </div>
 
             <!-- ── Customer (if present) ── -->
             ${(displaySale.customer_name || displaySale.customer_phone) ? `
-            <div style="padding:12px 20px;background:#fff5f7;border-bottom:1px solid #fce4ec;">
-              <div style="font-size:8px;font-weight:700;color:#c4869c;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;">Billed To</div>
-              ${displaySale.customer_name ? `<div style="font-size:14px;font-weight:600;color:#3d0a19;">${displaySale.customer_name}</div>` : ''}
-              ${displaySale.customer_phone ? `<div style="font-size:11px;color:#9a6070;margin-top:2px;">${displaySale.customer_phone}</div>` : ''}
+            <div style="padding:12px 20px;background:${bc.logoBg};border-bottom:1px solid ${bc.border};">
+              <div style="font-size:8px;font-weight:700;color:${bc.accentMuted};text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;">Billed To</div>
+              ${displaySale.customer_name ? `<div style="font-size:14px;font-weight:600;color:${bc.textDark};">${displaySale.customer_name}</div>` : ''}
+              ${displaySale.customer_phone ? `<div style="font-size:11px;color:${bc.textMuted};margin-top:2px;">${displaySale.customer_phone}</div>` : ''}
             </div>` : ''}
 
             <!-- ── Items ── -->
             <div style="padding:16px 20px 8px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:2px solid #8c2e56;margin-bottom:2px;">
-                <div style="font-size:8px;font-weight:700;color:#8c2e56;text-transform:uppercase;letter-spacing:1.5px;">Description</div>
-                <div style="font-size:8px;font-weight:700;color:#8c2e56;text-transform:uppercase;letter-spacing:1.5px;">Amount</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:2px solid ${bc.accent};margin-bottom:2px;">
+                <div style="font-size:8px;font-weight:700;color:${bc.accent};text-transform:uppercase;letter-spacing:1.5px;">Description</div>
+                <div style="font-size:8px;font-weight:700;color:${bc.accent};text-transform:uppercase;letter-spacing:1.5px;">Amount</div>
               </div>
               ${imgItemsHTML}
             </div>
 
             <!-- ── Totals ── -->
-            <div style="margin:6px 14px 14px;background:#fff5f7;border-radius:12px;padding:13px 14px;border:1px solid #fce4ec;">
+            <div style="margin:6px 14px 14px;background:${bc.logoBg};border-radius:12px;padding:13px 14px;border:1px solid ${bc.border};">
               ${displaySale.subtotal_amount !== displaySale.total_amount ? `
               <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:8px;">
-                <span style="color:#9a6070;">Subtotal</span>
-                <span style="font-weight:600;color:#3d0a19;">${formatCurrency(displaySale.subtotal_amount)}</span>
+                <span style="color:${bc.textMuted};">Subtotal</span>
+                <span style="font-weight:600;color:${bc.textDark};">${formatCurrency(displaySale.subtotal_amount)}</span>
               </div>` : ''}
               ${displaySale.total_discount > 0 ? `
               <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:8px;">
-                <span style="color:#9a6070;">Discount</span>
+                <span style="color:${bc.textMuted};">Discount</span>
                 <span style="font-weight:600;color:#ea580c;">–${formatCurrency(displaySale.total_discount)}</span>
               </div>` : ''}
               ${displaySale.total_tax > 0 ? `
               <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:8px;">
-                <span style="color:#9a6070;">GST (${shopDetails?.tax_rate || 5}%)</span>
-                <span style="font-weight:600;color:#3d0a19;">${formatCurrency(displaySale.total_tax)}</span>
+                <span style="color:${bc.textMuted};">GST (${shopDetails?.tax_rate || 5}%)</span>
+                <span style="font-weight:600;color:${bc.textDark};">${formatCurrency(displaySale.total_tax)}</span>
               </div>` : ''}
               <!-- Total highlight bar -->
-              <div style="background:linear-gradient(135deg,#5e1a38,#8c2e56);border-radius:9px;padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#fecdd3;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">Total Paid</span>
+              <div style="background:linear-gradient(135deg,${bc.headerFrom},${bc.headerTo});border-radius:9px;padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:${bc.footerLabel};font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">Total Paid</span>
                 <span style="color:#ffffff;font-size:20px;font-weight:800;letter-spacing:0.5px;">${formatCurrency(displaySale.total_amount)}</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid #fce4ec;">
-                <span style="font-size:11px;color:#9a6070;">Payment Method</span>
-                <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#7c1342;letter-spacing:0.5px;">${displaySale.payment_method}</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid ${bc.border};">
+                <span style="font-size:11px;color:${bc.textMuted};">Payment Method</span>
+                <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:${bc.textAccent};letter-spacing:0.5px;">${displaySale.payment_method}</span>
               </div>
             </div>
 
             <!-- ── Savings ── -->
             ${imgSavingsHTML}
 
-            <!-- ── Rose footer ── -->
-            <div style="background:linear-gradient(135deg,#5e1a38,#8c2e56);padding:20px;text-align:center;">
+            <!-- ── Themed footer ── -->
+            <div style="background:linear-gradient(135deg,${bc.headerFrom},${bc.headerTo});padding:20px;text-align:center;">
               <div style="font-size:14px;font-weight:700;color:#ffffff;margin-bottom:4px;">Thank you for shopping with us!</div>
-              <div style="font-size:10px;color:#e8a0b8;letter-spacing:0.5px;margin-bottom:14px;">We look forward to seeing you again.</div>
-              <div style="display:inline-block;border:1px dashed #7a2547;padding:6px 18px;border-radius:6px;">
-                <span style="font-family:'Courier New',monospace;font-size:10px;color:#d4869f;letter-spacing:2px;">${billNumber}</span>
+              <div style="font-size:10px;color:${bc.textOnHeaderSoft};letter-spacing:0.5px;margin-bottom:14px;">We look forward to seeing you again.</div>
+              <div style="display:inline-block;border:1px dashed ${bc.headerDivider};padding:6px 18px;border-radius:6px;">
+                <span style="font-family:'Courier New',monospace;font-size:10px;color:${bc.textOnHeaderMuted};letter-spacing:2px;">${billNumber}</span>
               </div>
             </div>
 
@@ -1086,7 +1086,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#fdf0f3',
+        backgroundColor: bc.bg,
         windowWidth: 390,
       });
 
@@ -1149,7 +1149,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         }).join('\n');
 
         const message =
-          // `🛍️ *${appConfig.billing.receiptHeader}* - Fashion Forward. Always.\n` +
+          // `🛍️ *${appConfig.billing.receiptHeader}* - ${appConfig.billing.tagline}\n` +
           // `━━━━━━━━━━━━━━━\n` +
           // `📋 *Invoice:* ${billNumber}\n` +
           // `📅 *Date:* ${formatDate(displaySale.created_at)}\n` +
@@ -1274,7 +1274,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
                       {appConfig.billing.receiptHeader}
                     </h1>
                     <p style={{fontSize: '10px', color: bc.textOnHeaderSoft, marginTop: '5px', letterSpacing: '2.5px', fontWeight: 500, margin: '5px 0 0'}}>
-                      FASHION FORWARD. ALWAYS.
+                      {appConfig.billing.tagline.toUpperCase()}
                     </p>
                     {shopDetails && (
                       <div style={{fontSize: '11px', color: bc.textOnHeaderMuted, marginTop: '8px', lineHeight: 1.6}}>

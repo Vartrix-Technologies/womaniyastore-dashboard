@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Profile, UserRole } from '@/types';
 import { clearAllCachedStats } from '@/lib/utils/stats-cache';
+import { appConfig } from '@/lib/config/app.config';
 
 // ── Debug logger ───────────────────────────────────────────────────────
 const DEBUG = process.env.NODE_ENV === 'development';
@@ -20,7 +21,7 @@ function authLog(action: string, ...args: unknown[]) {
 // app would stall because fetchProfile never resolves.  We cache the
 // most recent successful profile so the initial load can skip the
 // network call and navigate instantly.
-const PROFILE_CACHE_KEY = 'womaniya_cached_profile';
+const PROFILE_CACHE_KEY = appConfig.internal.profileCacheKey;
 
 function getCachedProfile(userId: string): Profile | null {
   try {

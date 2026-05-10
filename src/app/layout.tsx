@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
+import { appConfig } from "@/lib/config/app.config";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegistration } from "@/components/shared/ServiceWorkerRegistration";
@@ -14,24 +15,19 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Womaniya Dashboard - Airoli",
-  description: "Point of Sale and Inventory Management System for Womaniya Airoli",
-  manifest: "/manifest.json",
+  title: appConfig.brand.fullName,
+  description: appConfig.brand.description,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Womaniya Dashboard",
+    title: appConfig.brand.fullName,
   },
   icons: {
     icon: [
-      { url: "/womaniya_logo_darkbg.png", sizes: "512x512", type: "image/png" },
-      { url: "/womaniya_logo_lightbg.png", sizes: "512x512", type: "image/png" },
-      { url: "/womaniya_logo_darkbg.svg", sizes: "512x512", type: "image/svg+xml" },
-      { url: "/womaniya_logo_lightbg.svg", sizes: "512x512", type: "image/svg+xml" },
+      { url: appConfig.billing.logoPath, sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/womaniya_logo_darkbg.png", sizes: "512x512", type: "image/png" },
-      { url: "/womaniya_logo_lightbg.png", sizes: "512x512", type: "image/png" },
+      { url: appConfig.billing.logoPath, sizes: "512x512", type: "image/png" },
     ],
   },
 };

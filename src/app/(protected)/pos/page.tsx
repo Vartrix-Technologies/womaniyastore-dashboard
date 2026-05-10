@@ -26,7 +26,7 @@ import { useRouter } from 'next/navigation';
 const s = appConfig.styles;
 const a = s.accent;
 
-const CART_STORAGE_KEY = 'womaniya-pos-cart';
+const CART_STORAGE_KEY = appConfig.internal.cartStorageKey;
 
 // Module-level flag to track if restore toast was shown
 // Survives React StrictMode remounts but resets on page reload

@@ -92,14 +92,14 @@ export function TopBar({ profile, shopName }: TopBarProps) {
           >
             <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center">
               <img
-                src="/womaniya_logo_darkbg.png"
+                src={appConfig.billing.logoDarkPath}
                 alt={appConfig.brand.name}
                 width={36}
                 height={36}
                 className="w-9 h-9 object-contain dark:hidden"
               />
               <img
-                src="/womaniya_logo_lightbg.png"
+                src={appConfig.billing.logoPath}
                 alt={appConfig.brand.name}
                 width={36}
                 height={36}

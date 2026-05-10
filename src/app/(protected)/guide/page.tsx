@@ -188,7 +188,7 @@ const GUIDE_PHASES: GuidePhase[] = [
                 steps: [
                     { text: 'Go to Settings → "QR Prefixes" tab' },
                     { text: 'Tap "Add Prefix"' },
-                    { text: 'Enter a short code (e.g., "WMN" for Womaniya, "KID" for kids)' },
+                    { text: 'Enter a short code (e.g., "BRD" for your brand, "KID" for kids)' },
                     { text: 'Add a description' },
                     { text: 'Tap "Save" — repeat for different product lines' },
                 ],

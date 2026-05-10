@@ -121,7 +121,7 @@ supabase db push
 
 Run each migration file **in order** via Supabase Dashboard → SQL Editor:
 
-1. `supabase/migrations/00000000000000_initial_schema.sql` — Core schema (tables, enums, RLS, functions)
+1. `supabase/migrations/00000000000000_initial_schema.sql` — Core schema (tables, enums, RLS, helper functions)
 2. `supabase/migrations/20241221000000_create_user_profiles_view.sql`
 3. `supabase/migrations/20241222000000_bill_number_function.sql`
 4. `supabase/migrations/20241222000100_expense_categories.sql`
@@ -140,9 +140,30 @@ Run each migration file **in order** via Supabase Dashboard → SQL Editor:
 17. `supabase/migrations/20260122000100_add_sale_to_sale_items.sql`
 18. `supabase/migrations/20260125000000_user_management.sql`
 19. `supabase/migrations/20260205000000_inventory_items_rls.sql`
-20. Continue with any remaining migrations in `supabase/migrations/` in date order
+20. `supabase/migrations/20260205000100_sale_returns_rls.sql`
+21. `supabase/migrations/20260208000000_fix_function_search_path.sql`
+22. `supabase/migrations/20260208000100_fix_user_profiles_security_definer.sql`
+23. `supabase/migrations/20260210000000_categories_sort_order.sql`
+24. `supabase/migrations/20260219000000_lots_rls.sql`
+25. `supabase/migrations/20260301000000_fix_rls_performance.sql`
+26. `supabase/migrations/20260301000100_shops_update_rls.sql`
+27. `supabase/migrations/20260302000000_optimize_indexes.sql`
+28. `supabase/migrations/20260303000000_consolidate_profiles_policies.sql`
+29. `supabase/migrations/20260303000100_fix_categories_sizes_rls.sql`
+30. `supabase/migrations/20260306000000_fix_profiles_update_recursion.sql`
+31. `supabase/migrations/20260314000100_item_level_sale_type.sql`
+32. `supabase/migrations/20260314_item_level_pricing.sql`
+33. `supabase/migrations/20260318000000_quick_sale_manual_items.sql`
+34. `supabase/migrations/20260319000000_allow_staff_insert_categories_sizes.sql`
+35. `supabase/migrations/20260319100000_fix_financial_transactions_schema.sql`
+36. `supabase/migrations/20260319100000_rename_category_id_to_expense_category_id.sql`
+37. `supabase/migrations/20260319110000_attendance_auto_close_guardrails.sql`
+38. `supabase/migrations/20260319120000_nightly_cron_pg_net.sql`
+39. `supabase/migrations/20260419100000_add_cost_price_to_sale_items.sql`
+40. `supabase/migrations/20260502000000_qr_code_auto_reset_trigger.sql`
+41. `supabase/migrations/20260502000001_fix_security_definer_permissions.sql`
 
-> **Tip**: List all migrations with `ls supabase/migrations/` and run them sequentially.
+> **Tip**: The Supabase CLI (`supabase db push`) runs all of these in order automatically. For manual execution, run them strictly in the order listed — each migration may depend on the previous.
 
 ### 3.3 Deploy Edge Functions
 
@@ -261,156 +282,124 @@ SELECT cron.schedule(
 
 ## 4. Frontend Branding
 
+All branding is centralized in a single config file. The rest of the app reads from it automatically — layout metadata, login page, auth token keys, bill renderer, PWA manifest, and all localStorage/IndexedDB keys are all wired to `appConfig`. You do not need to edit individual components.
+
+### Option A: Automated — Run the Setup Script (Recommended)
+
+```bash
+# macOS / Linux
+chmod +x scripts/setup-client.sh
+./scripts/setup-client.sh \
+  --name "ClientStore" \
+  --full-name "ClientStore Dashboard" \
+  --short-name "ClientStore" \
+  --logo-letter "C" \
+  --tagline "Style Redefined." \
+  --receipt-header "CLIENTSTORE" \
+  --idb-name "clientstore-dashboard" \
+  --logo-path "/brand_logo_lightbg.png" \
+  --logo-dark-path "/brand_logo_darkbg.png" \
+  --logo-alt "ClientStore Logo" \
+  --theme-color "#f0fdfa"
+```
+
+```powershell
+# Windows PowerShell
+.\scripts\setup-client.ps1 `
+  -Name "ClientStore" `
+  -FullName "ClientStore Dashboard" `
+  -ShortName "ClientStore" `
+  -LogoLetter "C" `
+  -Tagline "Style Redefined." `
+  -ReceiptHeader "CLIENTSTORE" `
+  -IdbName "clientstore-dashboard" `
+  -LogoPath "/brand_logo_lightbg.png" `
+  -LogoDarkPath "/brand_logo_darkbg.png" `
+  -LogoAlt "ClientStore Logo" `
+  -ThemeColor "#f0fdfa"
+```
+
+The script updates `app.config.ts`, `offline.html`, and `package.json`, then runs `npm run check:white-label` to confirm no stale brand references remain. Then proceed to [section 4.3](#43-replace-logo-files) to drop in the client's logo images.
+
+---
+
+### Option B: Manual
+
 ### 4.1 Central Config — `src/lib/config/app.config.ts`
 
-This is the **primary branding file**. Update all values:
+This is the **single source of truth** for all branding. Every component, the PWA manifest, the auth flow, the bill renderer, and all localStorage/IndexedDB keys read from here automatically. Edit only this file:
 
 ```typescript
 export const appConfig = {
   brand: {
-    name: 'ClientStore',                              // ← Brand name
-    fullName: 'ClientStore Dashboard',                 // ← Full app title
-    shortName: 'ClientStore',                          // ← PWA short name
+    name: 'ClientStore',                    // ← Display brand name
+    fullName: 'ClientStore Dashboard',       // ← Browser tab title + login page heading
+    shortName: 'ClientStore',               // ← PWA home screen label
     description: 'Point of Sale and Inventory Management System',
-    logoLetter: 'C',                                   // ← First letter (avatar fallback)
+    logoLetter: 'C',                        // ← Fallback avatar letter + offline page icon
   },
   theme: {
     logoGradient: { from: 'from-brand-from', to: 'to-brand-to' },
-    themeColor: '#f0fdfa',      // ← PWA status bar color (match brand palette)
-    backgroundColor: '#f0fdfa', // ← PWA splash screen bg
+    themeColor: '#f0fdfa',        // ← PWA status bar color
+    backgroundColor: '#f0fdfa',   // ← PWA splash screen background
   },
   billing: {
-    receiptHeader: 'CLIENTSTORE',                      // ← Receipt header (UPPERCASE)
-    logoPath: '/clientstore_logo_darkbg.png',          // ← Receipt logo path
-    logoAlt: 'ClientStore Logo',                       // ← Logo alt text
+    receiptHeader: 'CLIENTSTORE',           // ← Receipt/invoice header (UPPERCASE)
+    logoPath: '/brand_logo_lightbg.png',    // ← Logo on light backgrounds (login, receipts)
+    logoDarkPath: '/brand_logo_darkbg.png', // ← Logo on dark backgrounds (header, QR codes)
+    logoAlt: 'ClientStore Logo',            // ← Alt text for all logo images
+    tagline: 'Style Redefined.',            // ← Tagline on receipts and invoices
   },
   internal: {
-    idbName: 'clientstore-dashboard',                  // ← IndexedDB name
-    apiAppName: 'clientstore-dashboard',               // ← API header identifier
+    idbName: 'clientstore-dashboard',                          // ← IndexedDB database name
+    apiAppName: 'clientstore-dashboard',                       // ← X-Application-Name request header
+    lastEmailKey: 'clientstore_last_email',                    // ← Remembers last login email
+    profileCacheKey: 'clientstore_cached_profile',             // ← 24h profile cache
+    colorPaletteKey: 'clientstore-color-palette',              // ← User's chosen theme palette
+    inventoryCacheTimestampKey: 'clientstore-inventory-cache-timestamp',
+    cartStorageKey: 'clientstore-pos-cart',                    // ← POS cart persistence
+    backupFilePrefix: 'clientstore-backup',                    // ← Data export filename prefix
   },
-  // styles section: Leave as-is (driven by CSS variables/theme system)
+  // styles section: Leave as-is — driven by CSS variables and the theme system
 } as const;
 ```
 
-### 4.2 Replace Logo Files
+### 4.2 Update Offline Page — `public/offline.html`
 
-Replace files in `public/`:
+This is the only file not covered by `appConfig` (it is a static HTML file served by the service worker, with no access to TypeScript). Make two changes — both are marked with `<!-- WHITE-LABEL -->` comments in the file:
 
-| Old File | New File | Purpose |
-|----------|----------|---------|
-| `womaniya_logo_darkbg.png` | `clientstore_logo_darkbg.png` | Login page, receipts, metadata |
-| `womaniya_logo_lightbg.png` | `clientstore_logo_lightbg.png` | PWA icon, manifest |
-| `womaniya_logo_darkbg.svg` | `clientstore_logo_darkbg.svg` | Scalable logo |
-| `womaniya_logo_lightbg.svg` | `clientstore_logo_lightbg.svg` | Scalable logo |
-| `womaniya-logo.png` | `clientstore-logo.png` | Bill preview (A4 layout) |
+```html
+<!-- 1. Update the page title -->
+<title>ClientStore - Offline</title>
 
-Also replace all icons in `public/icons/`:
+<!-- 2. Update the logo letter -->
+<div class="icon">C</div>
+```
+
+**Optional**: Update the inline gradient colors in the `<style>` block to match the client's primary brand color (the comment in the file marks the exact lines).
+
+### 4.3 Replace Logo Files
+
+Drop the client's logo images into `public/`, keeping these exact filenames (referenced by `appConfig.billing.logoPath` and `appConfig.billing.logoDarkPath`):
+
+| Filename | Size | Used In |
+|---|---|---|
+| `brand_logo_lightbg.png` | 512×512 | Login page, receipts, PWA manifest |
+| `brand_logo_darkbg.png` | 512×512 | TopBar header, QR codes, BrandLoader |
+
+Also replace all 8 SVG icons in `public/icons/` with the client's brand icon at each size:
 - `icon-72x72.svg`, `icon-96x96.svg`, `icon-128x128.svg`, `icon-144x144.svg`
 - `icon-152x152.svg`, `icon-192x192.svg`, `icon-384x384.svg`, `icon-512x512.svg`
 
-### 4.3 Update Layout Metadata — `src/app/layout.tsx`
+### 4.4 Update Default Theme Colors (Optional)
 
-```typescript
-// Update the title (line ~20)
-title: "ClientStore Dashboard",  // Remove location suffix like "- Airoli"
+The app ships with a teal palette as default and lets users switch between 6 palettes at runtime via Settings. If the client's brand uses a different primary color, update the default so it loads correctly on first launch:
 
-// Update icon references to new logo filenames
-icons: {
-  icon: '/clientstore_logo_darkbg.png',
-  apple: '/clientstore_logo_darkbg.png',
-},
-```
-
-### 4.4 Update Login Page — `src/app/login/page.tsx`
-
-Search and replace:
-- Logo image `src` → `/clientstore_logo_darkbg.png`
-- Card title → `ClientStore Dashboard`
-- localStorage key `womaniya_last_email` → `clientstore_last_email`
-
-### 4.5 Update Bill Preview — `src/components/shared/BillPreviewDialog.tsx`
-
-This file has **hardcoded branding** that must be updated:
-
-1. **Logo image**: Change `src="/womaniya-logo.png"` → `src="/clientstore-logo.png"`
-2. **Header text**: Change `WOMANIYA` → `CLIENTSTORE` (or use `appConfig.billing.receiptHeader`)
-3. **Tagline**: Change `"Fashion Forward. Always."` → Client's tagline (in all 3 places)
-4. **Footer**: Update `"Visit again. Fashion Forward. Always."` → New tagline
-
-### 4.6 Update PWA Manifest — `public/manifest.json`
-
-```json
-{
-  "name": "ClientStore Dashboard",
-  "short_name": "ClientStore",
-  "description": "Point of Sale and Inventory Management System",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#f0fdfa",
-  "theme_color": "#f0fdfa",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/clientstore_logo_darkbg.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "/clientstore_logo_lightbg.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "/clientstore_logo_darkbg.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/clientstore_logo_lightbg.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    }
-  ]
-}
-```
-
-### 4.7 Update Service Worker — `public/sw.js`
-
-```javascript
-// Line ~4: Update cache name
-const CACHE_NAME = 'clientstore-v1';  // Was 'womaniya-v1'
-
-// Line ~14: Update pre-cache icon paths (if icon filenames changed)
-const urlsToCache = [
-  '/',
-  '/offline.html',
-  '/manifest.json',
-  '/icons/icon-192x192.svg',
-  '/icons/icon-512x512.svg'
-];
-```
-
-### 4.8 Update Offline Page — `public/offline.html`
-
-```html
-<title>ClientStore - Offline</title>
-
-<!-- Update the logo letter -->
-<div class="icon">C</div>  <!-- First letter of brand name -->
-
-<!-- Optional: Update gradient colors if brand palette differs -->
-<!-- Default: background: linear-gradient(135deg, #14b8a6, #06b6d4) -->
-```
-
-### 4.9 Update Default Theme Colors (Optional)
-
-If the client's brand uses a different primary color than teal:
-
-**`src/app/globals.css`** — Update the default CSS variables (lines ~61-73):
+**`src/app/globals.css`** — Update the CSS custom property defaults (search for `--color-brand-50`):
 
 ```css
 :root {
-  --color-brand-50: #f0f9ff;    /* Lightest shade */
+  --color-brand-50:  #f0f9ff;
   --color-brand-100: #e0f2fe;
   --color-brand-200: #bae6fd;
   --color-brand-300: #7dd3fc;
@@ -420,23 +409,24 @@ If the client's brand uses a different primary color than teal:
   --color-brand-700: #0369a1;
   --color-brand-800: #075985;
   --color-brand-900: #0c4a6e;
-  --color-brand-950: #082f49;   /* Darkest shade */
+  --color-brand-950: #082f49;
   --color-brand-from: #0ea5e9;  /* Gradient start */
-  --color-brand-to: #06b6d4;    /* Gradient end */
+  --color-brand-to:   #06b6d4;  /* Gradient end */
 }
 ```
 
-**`src/context/ThemeColorContext.tsx`** — Update the `PALETTES` array to change the default palette, or add a custom one matching the client's brand.
+**`src/lib/config/app.config.ts`** → `styles.brandHex` — Update to match (used in canvas/SVG rendering where Tailwind classes cannot be used):
 
-**`src/lib/config/app.config.ts`** — Update `styles.brandHex` to match:
 ```typescript
 brandHex: {
-  solid: '#0ea5e9',     // Primary solid color
-  primary: '#0284c7',   // Primary text color
-  light: '#f0f9ff',     // Lightest shade
+  solid:    '#0ea5e9',
+  primary:  '#0284c7',
+  light:    '#f0f9ff',
   solidRgb: 'rgb(14 165 233)',
 },
 ```
+
+**`src/context/ThemeColorContext.tsx`** — Set the matching palette as default in the `PALETTES` array, or add a new custom palette entry for the client's exact brand colors.
 
 ---
 
@@ -509,6 +499,14 @@ Or trigger manually from Vercel Dashboard → **Deployments → Redeploy**.
 ---
 
 ## 7. Post-Deployment Verification
+
+### 7.0 Automated Check (Run First)
+
+```bash
+npm run check:white-label
+```
+
+Confirms no hardcoded brand strings or palette color values remain in the codebase. Fix any violations before testing manually.
 
 ### 7.1 Authentication Flow
 
@@ -600,28 +598,24 @@ supabase functions deploy <function-name>
 
 | # | File | What to Change |
 |---|------|----------------|
-| 1 | `src/lib/config/app.config.ts` | Brand name, logo letter, receipt header, logo path, IDB name, API name |
-| 2 | `src/app/layout.tsx` | Page title, icon paths |
-| 3 | `src/app/login/page.tsx` | Logo path, card title, localStorage key |
-| 4 | `src/components/shared/BillPreviewDialog.tsx` | Logo, header, tagline (3 places) |
-| 5 | `public/manifest.json` | App name, short name, icon paths |
-| 6 | `public/sw.js` | Cache name |
-| 7 | `public/offline.html` | Title, logo letter, gradient colors |
-| 8 | `src/app/globals.css` | Default brand color CSS variables (if changing palette) |
-| 9 | `src/context/ThemeColorContext.tsx` | Default palette / custom palette (if changing colors) |
-| 10 | `src/lib/config/app.config.ts` → `styles.brandHex` | Raw hex values (if changing colors) |
-| 11 | `package.json` | Package name |
-| 12 | `public/` logo files | All 5 logo images + 8 PWA icons |
-| 13 | `.env.local` | Supabase URL and anon key |
+| 1 | `src/lib/config/app.config.ts` | All `brand`, `billing`, `internal`, and `theme` values (single source of truth — everything else updates automatically) |
+| 2 | `public/offline.html` | Page title + logo letter (2 lines marked with `<!-- WHITE-LABEL -->` comments) |
+| 3 | `public/brand_logo_lightbg.png` | Replace with client's light-background logo (512×512) |
+| 4 | `public/brand_logo_darkbg.png` | Replace with client's dark-background logo (512×512) |
+| 5 | `public/icons/` (8 files) | Replace all SVG icons with client's brand icon at each size |
+| 6 | `src/app/globals.css` | Default brand CSS variables (only if changing the default color palette) |
+| 7 | `src/context/ThemeColorContext.tsx` | Default/custom palette entry (only if changing colors) |
+| 8 | `src/lib/config/app.config.ts` → `styles.brandHex` | Raw hex values for canvas/SVG rendering (only if changing colors) |
+| 9 | `package.json` | Package `name` field |
+| 10 | `.env.local` | Supabase URL and anon key |
 
-### Global Text Search
-
-After making changes, verify no stale references remain:
+### Verify No Stale Branding
 
 ```bash
-# Search for old brand name (case-insensitive)
-grep -ri "womaniya" src/ public/ --include="*.ts" --include="*.tsx" --include="*.json" --include="*.html" --include="*.js" --include="*.css"
+npm run check:white-label
 ```
+
+Scans `src/` and `public/` for hardcoded brand strings and legacy palette color values. Exits `0` if clean, or prints a detailed violation report if anything was missed. Run this after every client setup — it is CI-friendly (non-zero exit on violations).
 
 ### Backend Setup Order
 
@@ -640,10 +634,10 @@ grep -ri "womaniya" src/ public/ --include="*.ts" --include="*.tsx" --include="*
 | Supabase project + migrations | 15 min |
 | Edge function deploy | 5 min |
 | Initial data (shop, superadmin) | 10 min |
-| Frontend branding updates | 30 min |
+| Frontend branding (script + logo swap) | 10 min |
 | Vercel deploy + domain setup | 15 min |
 | Testing & verification | 30 min |
-| **Total** | **~1.5–2 hours** |
+| **Total** | **~1.5 hours** |
 
 ---
 
