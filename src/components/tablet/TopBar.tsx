@@ -110,6 +110,9 @@ export function TopBar({ profile, shopName }: TopBarProps) {
               <h1 className={`text-[15px] sm:text-[14px] md:text-[15px] lg:text-[18px] font-bold tracking-tight leading-tight ${isDark ? 'text-slate-200' : 'text-foreground'}`}>
                 {shopName || appConfig.brand.name}
               </h1>
+              <p className={`text-[10px] leading-tight tracking-wide ${isDark ? 'text-slate-400' : 'text-muted-foreground'}`}>
+                {appConfig.billing.tagline}
+              </p>
             </div>
           </button>
 
