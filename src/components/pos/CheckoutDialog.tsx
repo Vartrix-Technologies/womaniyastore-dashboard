@@ -474,7 +474,7 @@ export function CheckoutDialog({
         Rendered outside the main DialogContent so it sits at the top
         of the screen on mobile, above the virtual keyboard. */}
     <Dialog open={customerDetailsOpen} onOpenChange={setCustomerDetailsOpen}>
-      <DialogContent className="sm:max-w-sm !top-3 !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2 max-h-[85dvh] overflow-y-auto">
+      <DialogContent className="sm:max-w-sm !top-[calc(var(--sat)+12px)] !translate-y-0 sm:!top-[50dvh] sm:!-translate-y-1/2 max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-4 w-4" /> Customer Details

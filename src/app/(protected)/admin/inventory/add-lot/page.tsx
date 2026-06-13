@@ -298,6 +298,7 @@ export default function AddStockLotPage() {
         description: `Assigned: ${codeRange}${remainingText}`,
         duration: 4000
       });
+      router.refresh(); // Invalidate router cache so inventory page fetches fresh data
       router.push('/admin/inventory');
     } catch (error: any) {
       console.error('Error adding stock lot:', error);
