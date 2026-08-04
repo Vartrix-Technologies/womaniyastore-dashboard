@@ -178,7 +178,11 @@ Deno.serve(async (req) => {
       .eq('shop_id', profile.shop_id)
       .eq('prefix_id', prefix_id) // NEW: Filter by prefix
       .eq('status', 'unused')
-      .order('sequence_number', { ascending: true }) // NEW: Order by sequence for proper ordering
+      // Lowest code first, so recycled/freed codes get reused before fresh ones.
+      // Codes are zero-padded within a prefix, so lexical order == numeric order.
+      // Sorting on `code` rather than `sequence_number` keeps gap-filling correct
+      // for legacy rows where sequence_number is NULL (those sort NULLS LAST).
+      .order('code', { ascending: true })
       .limit(quantity)
 
     if (qrError) {

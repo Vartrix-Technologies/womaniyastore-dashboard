@@ -195,11 +195,13 @@ function InventoryPageContent() {
 
         if (itemError) throw itemError;
 
-        // Then delete the orphaned QR code
+        // Recycle the QR code so the printed sticker can be reassigned.
+        // trg_reset_qr_on_inventory_delete does this too; keeping it explicit
+        // means behaviour does not depend on that trigger being present.
         if (item.qr_codes?.id) {
           const { error: qrError } = await supabase
             .from('qr_codes')
-            .delete()
+            .update({ status: 'unused', assigned_at: null })
             .eq('id', item.qr_codes.id);
 
           if (qrError) throw qrError;
@@ -526,18 +528,12 @@ function InventoryPageContent() {
     setEditingTableItem(item);
   }, []);
 
-  const handleDeleteFromDetails = useCallback(async (item: InventoryItemForList) => {
-    const { error } = await supabase
-      .from('inventory_items')
-      .delete()
-      .eq('id', item.id)
-      .neq('status', 'sold');
-    if (error) { toast.error('Failed to delete item'); return; }
-    toast.success('Item deleted');
+  // Reuse the row-level delete so both entry points share the optimistic
+  // delete + undo toast (and the QR cleanup that goes with it)
+  const handleDeleteFromDetails = (item: InventoryItemForList) => {
     setViewingItem(null);
-    fetchInventory();
-    refreshStats();
-  }, [fetchInventory, refreshStats]);
+    handleDeleteItem(item);
+  };
 
   if (statusFilter !== 'all') filterChips.push({ label: 'Status', value: statusFilter, onClear: () => { setStatusFilter('all'); setCurrentPage(1); }, className: 'capitalize' });
   if (categoryFilter !== 'all') filterChips.push({ label: 'Category', value: categories.find(c => c.id === categoryFilter)?.name || categoryFilter, onClear: () => { setCategoryFilter('all'); setCurrentPage(1); } });
@@ -961,9 +957,15 @@ function InventoryPageContent() {
       {/* Lots History Drawer */}
       <LotsHistorySheet
         open={lotsHistoryOpen}
-        onOpenChange={setLotsHistoryOpen}
+        onOpenChange={(open) => {
+          setLotsHistoryOpen(open);
+          // Catch up on anything changed inside the sheet (deletes commit
+          // after the undo toast, so onDataChanged can lag the close)
+          if (!open) { fetchInventory(); refreshStats(); }
+        }}
         shopId={profile?.shop_id ?? null}
         onDataChanged={() => { fetchInventory(); refreshStats(); }}
+        onAddToCart={handleAddToCart}
       />
     </div>
   );

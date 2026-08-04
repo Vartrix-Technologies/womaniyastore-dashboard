@@ -82,11 +82,46 @@ interface LotsHistorySheetProps {
   shopId: string | null;
   /** Called after any edit so the parent table can refetch */
   onDataChanged?: () => void;
+  /** Optional — when provided, the item details dialog offers "Add to Cart" */
+  onAddToCart?: (item: InventoryItemForList) => void;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Flatten a lot-tree item + its owning lot into the shape the shared dialogs expect. */
+function toInventoryItem(item: LotItem, lot: LotEntry, shopId: string | null): InventoryItemForList {
+  return {
+    id: item.id,
+    status: item.status as InventoryItemForList['status'],
+    sold_at: item.sold_at,
+    created_at: item.created_at,
+    shop_id: shopId || '',
+    selling_price: item.selling_price ?? lot.selling_price_default,
+    cost_price: item.cost_price ?? lot.cost_price_per_unit,
+    tax_rate: item.tax_rate ?? lot.tax_rate,
+    sale_type: item.sale_type ?? lot.sale_type,
+    sale_reason: item.sale_reason ?? lot.sale_reason,
+    qr_codes: item.qr_codes,
+    lots: {
+      id: lot.id,
+      selling_price_default: lot.selling_price_default,
+      cost_price_per_unit: lot.cost_price_per_unit,
+      tax_rate: lot.tax_rate,
+      date_of_stock_arrival: lot.date_of_stock_arrival,
+      vendor_name: lot.vendor_name,
+      sale_type: lot.sale_type,
+      min_margin_percent: lot.min_margin_percent,
+      sale_reason: lot.sale_reason,
+      categories: lot.category_id ? { id: lot.category_id, name: lot.category_name } : null,
+      sizes: lot.size_id ? { size_name: lot.size_name } : null,
+      free_text_size: lot.free_text_size,
+    },
+  };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: LotsHistorySheetProps) {
+export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged, onAddToCart }: LotsHistorySheetProps) {
   const [loading, setLoading] = useState(false);
   const [dateGroups, setDateGroups] = useState<DateGroup[]>([]);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -371,27 +406,70 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
     onDataChanged?.();
   };
 
-  const handleConfirmDeleteItem = async () => {
+  const handleConfirmDeleteItem = () => {
     if (!deletingItem) return;
-    // Reset QR code to 'unused' BEFORE deleting so it can be reassigned
-    if (deletingItem.qr_codes?.id) {
-      const { error: qrResetError } = await supabase
-        .from('qr_codes')
-        .update({ status: 'unused', assigned_at: null })
-        .eq('id', deletingItem.qr_codes.id);
-      if (qrResetError) { toast.error('Failed to reset QR code'); return; }
-    }
-    const { error } = await supabase
-      .from('inventory_items')
-      .delete()
-      .eq('id', deletingItem.id)
-      .neq('status', 'sold');
-    if (error) { toast.error('Failed to delete item'); return; }
-    toast.success('Item deleted');
+    const item = deletingItem;
+
+    // Optimistic delete — drop from the tree immediately, undo via toast
+    const previousDateGroups = dateGroups;
+
+    setDateGroups(prev => prev.map(group => {
+      const owner = group.lots.find(l => l.items.some(i => i.id === item.id));
+      if (!owner) return group;
+      return {
+        ...group,
+        totalItems: group.totalItems - 1,
+        lots: group.lots.map(lot => lot.id !== owner.id ? lot : {
+          ...lot,
+          items: lot.items.filter(i => i.id !== item.id),
+          availableCount: lot.availableCount - (item.status === 'available' ? 1 : 0),
+          soldCount: lot.soldCount - (item.status === 'sold' ? 1 : 0),
+          damagedCount: lot.damagedCount - (item.status === 'damaged' ? 1 : 0),
+        }),
+      };
+    }));
+
     setDeletingItem(null);
     setViewingItem(null);
-    fetchLotsHistory();
-    onDataChanged?.();
+
+    const undoDelete = () => setDateGroups(previousDateGroups);
+
+    // Perform actual deletion in background
+    const doDelete = async () => {
+      try {
+        // Reset QR code to 'unused' BEFORE deleting so it can be reassigned
+        if (item.qr_codes?.id) {
+          const { error: qrResetError } = await supabase
+            .from('qr_codes')
+            .update({ status: 'unused', assigned_at: null })
+            .eq('id', item.qr_codes.id);
+          if (qrResetError) throw qrResetError;
+        }
+
+        const { error } = await supabase
+          .from('inventory_items')
+          .delete()
+          .eq('id', item.id)
+          .neq('status', 'sold');
+
+        if (error) throw error;
+
+        // Let the parent table + stats catch up
+        onDataChanged?.();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        undoDelete();
+        toast.error('Failed to delete item. Reverted.');
+      }
+    };
+
+    toast('Item deleted', {
+      description: `"${item.qr_codes?.code}" removed from inventory`,
+      action: { label: 'Undo', onClick: undoDelete },
+      duration: 6000,
+      onAutoClose: () => doDelete(),
+      onDismiss: () => doDelete(),
+    });
   };
   // ── Status badge helper ──────────────────────────────────────────────────
 
@@ -664,35 +742,7 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
                                         >
                                           <div className="flex-1 min-w-0 flex items-center gap-2">
                                             <button
-                                              onClick={() => {
-                                                setViewingItem({
-                                                  id: item.id,
-                                                  status: item.status as InventoryItemForList['status'],
-                                                  sold_at: item.sold_at,
-                                                  created_at: item.created_at,
-                                                  shop_id: shopId || '',
-                                                  selling_price: item.selling_price ?? lot.selling_price_default,
-                                                  cost_price: item.cost_price ?? lot.cost_price_per_unit,
-                                                  tax_rate: item.tax_rate ?? lot.tax_rate,
-                                                  sale_type: item.sale_type ?? lot.sale_type,
-                                                  sale_reason: item.sale_reason ?? lot.sale_reason,
-                                                  qr_codes: item.qr_codes,
-                                                  lots: {
-                                                    id: lot.id,
-                                                    selling_price_default: lot.selling_price_default,
-                                                    cost_price_per_unit: lot.cost_price_per_unit,
-                                                    tax_rate: lot.tax_rate,
-                                                    date_of_stock_arrival: lot.date_of_stock_arrival,
-                                                    vendor_name: lot.vendor_name,
-                                                    sale_type: lot.sale_type,
-                                                    min_margin_percent: lot.min_margin_percent,
-                                                    sale_reason: lot.sale_reason,
-                                                    categories: lot.category_id ? { id: lot.category_id, name: lot.category_name } : null,
-                                                    sizes: lot.size_id ? { size_name: lot.size_name } : null,
-                                                    free_text_size: lot.free_text_size,
-                                                  },
-                                                });
-                                              }}
+                                              onClick={() => setViewingItem(toInventoryItem(item, lot, shopId))}
                                               className="cursor-pointer hover:opacity-80 transition-opacity"
                                               title="View details"
                                             >
@@ -708,20 +758,15 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
                                                 Sold {formatDate(item.sold_at)}
                                               </span>
                                             )}
-                                            {item.status === 'available' && (
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 hover:text-brand-600"
-                                                onClick={() => {
-                                                  setEditingItem(item);
-                                                  setEditingItemLot(lot);
-                                                }}
-                                                title="Edit item"
-                                              >
-                                                <Pencil className="h-3 w-3" />
-                                              </Button>
-                                            )}
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7 hover:text-brand-600"
+                                              onClick={() => setViewingItem(toInventoryItem(item, lot, shopId))}
+                                              title="View details"
+                                            >
+                                              <Eye className="h-3 w-3" />
+                                            </Button>
                                           </div>
                                         </div>
                                       ))
@@ -798,6 +843,7 @@ export function LotsHistorySheet({ open, onOpenChange, shopId, onDataChanged }: 
         onClose={() => setViewingItem(null)}
         onEdit={handleEditItemFromDetails}
         onDelete={(item) => setDeletingItem(item)}
+        onAddToCart={onAddToCart ? (item) => { setViewingItem(null); onAddToCart(item); } : undefined}
       />
 
       {/* ── Delete Lot Confirmation ── */}
