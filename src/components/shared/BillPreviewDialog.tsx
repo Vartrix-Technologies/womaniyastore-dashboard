@@ -32,12 +32,31 @@ interface BillPreviewDialogProps {
   sale: Sale | SaleForList | null;
 }
 
+/** Stable id so the bill-image flow only ever owns one toast, updated in place. */
+const BILL_IMAGE_TOAST_ID = 'bill-image-download';
+
 export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialogProps) {
   const [shopDetails, setShopDetails] = useState<any>(null);
   const [fullSaleData, setFullSaleData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const billContentRef = useRef<HTMLDivElement>(null);
+  const dismissTimerRef = useRef<number | null>(null);
   const { palette } = useThemeColor();
+
+  // Hard guarantee that the bill-image toast leaves the screen. Sonner's own
+  // auto-dismiss timer can stay paused indefinitely (backgrounded PWA, latched
+  // hover/pointer state), but toast.dismiss() is timer-independent.
+  // 4500ms = just past the toasts' own 4000ms duration, so this only ever acts
+  // when Sonner's timer is stuck.
+  const scheduleToastDismiss = (id: string, ms = 4500) => {
+    if (dismissTimerRef.current) window.clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = window.setTimeout(() => toast.dismiss(id), ms);
+  };
+
+  useEffect(() => () => {
+    if (dismissTimerRef.current) window.clearTimeout(dismissTimerRef.current);
+    toast.dismiss(BILL_IMAGE_TOAST_ID);
+  }, []);
 
   // Bill preview colors derived from active palette
   const bc = {
@@ -909,9 +928,17 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
     // html2canvas cannot handle oklch()/lab() colours that cascade from
     // Tailwind's global `*` selector. Rendering inside an iframe gives us
     // a completely isolated document with zero inherited stylesheets.
-    try {
-      toast.info('Generating bill image…');
+    let iframe: HTMLIFrameElement | null = null;
 
+    // One toast for the whole flow, updated in place — never two stacked ones.
+    toast.loading('Generating bill image…', { id: BILL_IMAGE_TOAST_ID });
+    // Sonner gives loading toasts no close button and no swipe, so if html2canvas
+    // ever fails to settle the `finally` below never runs and the spinner would be
+    // stuck for good. Arm the escape hatch before the work starts; the finally
+    // replaces this timer with the normal 4.5s one. Generation is <5s in practice.
+    scheduleToastDismiss(BILL_IMAGE_TOAST_ID, 20000);
+
+    try {
       const imgSaleItems = saleItems;
       const festivalItems = imgSaleItems.filter((item: any) => item.sold_on_sale && item.sale_type === 'festival');
       const clearanceItems = imgSaleItems.filter((item: any) => item.sold_on_sale && item.sale_type === 'clearance');
@@ -1063,7 +1090,7 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
       </body></html>`;
 
       // Render inside an iframe so NO parent-page styles can leak in
-      const iframe = document.createElement('iframe');
+      iframe = document.createElement('iframe');
       iframe.style.position = 'absolute';
       iframe.style.left = '-9999px';
       iframe.style.width = '390px';
@@ -1090,28 +1117,38 @@ export function BillPreviewDialog({ open, onOpenChange, sale }: BillPreviewDialo
         windowWidth: 390,
       });
 
-      document.body.removeChild(iframe);
-
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((b) => resolve(b), 'image/png', 0.92)
       );
 
       if (!blob) {
-        toast.error('Failed to generate image');
+        toast.error('Failed to generate image', { id: BILL_IMAGE_TOAST_ID, duration: 4000 });
         return;
       }
 
       // Always download the PNG directly to the device
+      const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
+      link.href = objectUrl;
       link.download = `Invoice_${billNumber}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-      toast.success('Bill image downloaded!');
+      // Revoke late: on Android the download handler may not have read the blob
+      // yet, and revoking synchronously can silently kill the download.
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+
+      toast.success('Bill image downloaded!', { id: BILL_IMAGE_TOAST_ID, duration: 4000 });
     } catch (imgError) {
-      console.error('Image generation failed, falling back to text:', imgError);
+      console.error('Image generation failed:', imgError);
+      toast.error('Could not generate the bill image. Please try again.', {
+        id: BILL_IMAGE_TOAST_ID,
+        duration: 4000,
+      });
+    } finally {
+      // Runs even when html2canvas throws, so the off-screen iframe never leaks.
+      if (iframe?.parentNode) iframe.parentNode.removeChild(iframe);
+      scheduleToastDismiss(BILL_IMAGE_TOAST_ID);
     }
   };
 

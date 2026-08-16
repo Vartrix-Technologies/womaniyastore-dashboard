@@ -407,6 +407,15 @@ html {
 }
 [data-sonner-toast][data-type="info"] svg { color: #2563eb !important; }
 
+/* ── Loading ───────────────────────────────────────────────── */
+[data-sonner-toast][data-type="loading"] {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-left-color: #64748b !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+[data-sonner-toast][data-type="loading"] svg { color: #64748b !important; }
+
 /* ── Text elements ─────────────────────────────────────────── */
 [data-sonner-toast] [data-title],
 [data-sonner-toast] [data-description],
@@ -533,6 +542,11 @@ html {
   background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
 }
 
+/* Loading toasts are indefinite — a draining bar would misreport them as expiring. */
+[data-sonner-toast][data-type="loading"]::before {
+  display: none;
+}
+
 @keyframes toast-progress {
   from { transform: scaleX(1); }
   to   { transform: scaleX(0); }
@@ -562,6 +576,24 @@ html {
   opacity: 1;
   background: rgba(255,255,255,0.95) !important;
   transform: scale(1.05);
+}
+
+/* ── Keep toast controls tappable above modal dialogs ──────────
+   Radix dialogs set `pointer-events: none` on <body> while open. The Sonner
+   toaster is mounted in <body>, outside the dialog's portal layer, so it
+   inherits that and a toast's close/action buttons go dead above any dialog.
+   A descendant with `pointer-events: auto` is hit-testable regardless of an
+   ancestor's `none`, so re-enabling just the controls is enough.
+
+   Deliberately NOT applied to the toast body: at 380px wide in the top-right
+   corner it would sit on top of a centred dialog's own ✕ on a tablet in
+   landscape and swallow taps meant for it. The body stays click-through above
+   dialogs; with no dialog open everything inherits `auto` as before, so swipe
+   -to-dismiss is unaffected. */
+[data-sonner-toast] [data-close-button],
+[data-sonner-toast] [data-button],
+[data-sonner-toast] [data-cancel] {
+  pointer-events: auto;
 }
 
 /* ── Keyboard-aware dialogs (touch devices) ────────────────────
